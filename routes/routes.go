@@ -1,34 +1,26 @@
 package routes
 
 import (
-	"github.com/andrianprasetya/eventHub/internal/handlers"
-	"github.com/andrianprasetya/eventHub/internal/usecases"
-	"github.com/andrianprasetya/eventHub/middleware"
-	"github.com/labstack/echo/v4"
+	"github.com/andrianprasetya/eventHub/internal/tenant"
+	TH "github.com/andrianprasetya/eventHub/internal/tenant/handler"
+	"github.com/andrianprasetya/eventHub/internal/user"
+	UH "github.com/andrianprasetya/eventHub/internal/user/handler"
+	"github.com/gofiber/fiber/v2"
 )
 
-func SetupRoutes(e *echo.Echo, eventUC *usecases.EventUsecase) {
-	// Middleware JWT untuk route yang membutuhkan autentikasi
-	authMiddleware := middleware.JWTMiddleware("your-secret-key")
-	// Buat instance handler dengan dependency injection
-	eventHandler := handlers.NewEventHandler(eventUC)
+func SetupRoutes(c *fiber.App, tenantUC tenant.TenantUsecase, subscriptionPlanUC tenant.SubscriptionPlanUsecase, userUC user.UserUsecase) {
+	tenantHandler := TH.NewTenantHandler(tenantUC)
+	subscriptionPlanHandler := TH.NewSubscriptionPlanHandler(subscriptionPlanUC)
+	authHandler := UH.NewAuthHandler(userUC)
+	api := c.Group("/api")
+	v1 := api.Group("/v1")
 
-	// Grouping routes
-	api := e.Group("/api")
+	//tenant routes
+	tenant := v1.Group("/tenant")
+	subscription := v1.Group("/subscription")
+	user := v1.Group("/user")
 
-	// Auth routes
-	api.POST("/register", handlers.Register)
-	api.POST("/login", handlers.Login)
-
-	// Event routes (protected)
-	events := api.Group("/events", authMiddleware)
-	events.POST("", eventHandler.CreateEvent)
-	api.GET("/events/:id", eventHandler.GetEventByID)
-
-	// Ticket routes (protected)
-	tickets := api.Group("/tickets", authMiddleware)
-	tickets.POST("", handlers.CreateTicket)
-	tickets.GET("/:id", handlers.GetTicket)
-	tickets.GET("", handlers.GetAllTickets)
-	tickets.DELETE("/:id", handlers.DeleteTicket)
+	user.Post("/login", authHandler.Login)
+	tenant.Post("/register", tenantHandler.RegisterTenant)
+	subscription.Get("/get-plan", subscriptionPlanHandler.GetAll)
 }

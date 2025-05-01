@@ -1,46 +1,75 @@
 package database
 
 import (
-	models2 "github.com/andrianprasetya/eventHub/internal/models"
+	modelTenant "github.com/andrianprasetya/eventHub/internal/tenant/model"
+	modelUser "github.com/andrianprasetya/eventHub/internal/user/model"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 	"log"
 )
 
 // SeedUsers inserts initial data into the users table
-func SeedUsers() {
+func SeedUsers(DB *gorm.DB) {
 
+	var countRole, countSubscriptionPlan int64
+
+	DB.Model(&modelUser.Role{}).Count(&countRole)
+	DB.Model(&modelTenant.SubscriptionPlan{}).Count(&countSubscriptionPlan)
 	// Pastikan DB sudah terkoneksi
-	if DB == nil {
-		log.Fatal("Database is not connected")
-	}
 
-	tenants := []models2.Tenant{
+	db := GetConnection()
+
+	roles := []modelUser.Role{
 		{
-			ID:    uuid.New().String(),
-			Name:  "Tenant Alpha",
-			Email: "alpha@gmail.com",
+			ID:          uuid.New().String(),
+			Name:        "Admin",
+			Description: "Orang yang mengatur Tenant super Admin",
 		},
 		{
-			ID:    uuid.New().String(),
-			Name:  "Tenant Beta",
-			Email: "beta@gmail.com",
+			ID:          uuid.New().String(),
+			Name:        "Organizer",
+			Description: "Orang yang mengatur Event ",
+		},
+		{
+			ID:          uuid.New().String(),
+			Name:        "Attendee",
+			Description: "Orang yang menghadiri event ",
 		},
 	}
 
-	for _, tenant := range tenants {
-		DB.Create(&tenant)
-
-		settings := []models2.TenantSetting{
-			{ID: uuid.New().String(), TenantID: tenant.ID, Key: "timezone", Value: "UTC"},
-			{ID: uuid.New().String(), TenantID: tenant.ID, Key: "currency", Value: "USD"},
-			{ID: uuid.New().String(), TenantID: tenant.ID, Key: "language", Value: "en"},
-			{ID: uuid.New().String(), TenantID: tenant.ID, Key: "theme", Value: "dark"},
-		}
-
-		for _, setting := range settings {
-			DB.Create(&setting)
-		}
-
+	subscriptionPlans := []modelTenant.SubscriptionPlan{
+		{
+			ID:          uuid.New().String(),
+			Name:        "Free",
+			Price:       0,
+			DurationDay: 30,
+		},
+		{
+			ID:          uuid.New().String(),
+			Name:        "Basic",
+			Price:       5000,
+			DurationDay: 30,
+		},
+		{
+			ID:          uuid.New().String(),
+			Name:        "Premium",
+			Price:       20000,
+			DurationDay: 30,
+		},
 	}
-	log.Println("User seeding completed")
+
+	for _, tenant := range roles {
+		if countRole == 0 {
+			db.Create(&tenant)
+		}
+	}
+
+	for _, subscriptionPlan := range subscriptionPlans {
+		if countSubscriptionPlan == 0 {
+			db.Create(&subscriptionPlan)
+		}
+	}
+
+	log.Println("Tenant seeding completed")
+
 }

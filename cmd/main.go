@@ -1,25 +1,47 @@
 package main
 
 import (
-	"github.com/andrianprasetya/eventHub/database"
+	"flag"
+	"fmt"
+	_ "github.com/andrianprasetya/eventHub/database/dialect/postgres"
+	_ "github.com/andrianprasetya/eventHub/internal/shared/config"
+	tenantRepository "github.com/andrianprasetya/eventHub/internal/tenant/repository"
+	tenantUsecase "github.com/andrianprasetya/eventHub/internal/tenant/usecase"
+	userRepository "github.com/andrianprasetya/eventHub/internal/user/repository"
+	userUsecase "github.com/andrianprasetya/eventHub/internal/user/usecase"
 	"github.com/andrianprasetya/eventHub/routes"
-	"github.com/labstack/echo/v4"
+	appServer "github.com/andrianprasetya/eventHub/server"
+	"github.com/gofiber/fiber/v2"
 	"log"
+	"os"
 )
 
 func main() {
-	// Init Echo
-	e := echo.New()
+	//Argument parser for non-sensitive configurations
+	host := flag.String("host", os.Getenv("APP_HOST"), "API server host")
+	port := flag.String("port", os.Getenv("APP_PORT"), "API server port")
+	flag.Parse()
 
-	// Database setup
-	_, err := database.ConnectDB()
-	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
-	}
+	//initialize fiber
+	app := fiber.New()
 
-	// Setup routes
-	routes.SetupRoutes(e)
+	//connectDB
+	db := appServer.InitDatabase()
+	appServer.InitRedis()
 
-	// Start server
-	e.Logger.Fatal(e.Start(":8080"))
+	//Repository
+	tenantRepo := tenantRepository.NewTenantRepository(db)
+	subscriptionRepo := tenantRepository.NewSubscriptionRepository(db)
+	subscriptionPlanRepo := tenantRepository.NewSubscriptionPlanRepository(db)
+	userRepo := userRepository.NewUserRepository(db)
+	roleRepo := userRepository.NewRoleRepository(db)
+
+	//Usecase
+	tenantUC := tenantUsecase.NewTenantUsecase(tenantRepo, subscriptionRepo, subscriptionPlanRepo, userRepo, roleRepo)
+	subscriptionPlanUC := tenantUsecase.NewSubscriptionPlanUsecase(subscriptionPlanRepo)
+	userUC := userUsecase.NewUserUsecase(userRepo)
+
+	routes.SetupRoutes(app, tenantUC, subscriptionPlanUC, userUC)
+
+	log.Fatal(app.Listen(fmt.Sprintf("%s:%s", *host, *port)))
 }
