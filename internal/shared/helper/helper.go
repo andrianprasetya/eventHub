@@ -32,3 +32,7 @@ func LogLoginHistory(repo repository.LoginHistoryRepository, userId, ip string) 
 		}
 	}(log)
 }
+
+func LogActivity(repo repository.LoginHistoryRepository, userId, action, objectType, objectId string) {
+
+}
