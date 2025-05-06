@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	_ "github.com/andrianprasetya/eventHub/database/dialect/postgres"
+	logRepository "github.com/andrianprasetya/eventHub/internal/audit_security_log/repository"
 	_ "github.com/andrianprasetya/eventHub/internal/shared/config"
 	tenantRepository "github.com/andrianprasetya/eventHub/internal/tenant/repository"
 	tenantUsecase "github.com/andrianprasetya/eventHub/internal/tenant/usecase"
@@ -27,7 +28,7 @@ func main() {
 
 	//connectDB
 	db := appServer.InitDatabase()
-	appServer.InitRedis()
+	redis := appServer.InitRedis()
 
 	//Repository
 	tenantRepo := tenantRepository.NewTenantRepository(db)
@@ -35,13 +36,14 @@ func main() {
 	subscriptionPlanRepo := tenantRepository.NewSubscriptionPlanRepository(db)
 	userRepo := userRepository.NewUserRepository(db)
 	roleRepo := userRepository.NewRoleRepository(db)
+	loginHistoryRepo := logRepository.NewLoginHistoryRepository(db)
 
 	//Usecase
 	tenantUC := tenantUsecase.NewTenantUsecase(tenantRepo, subscriptionRepo, subscriptionPlanRepo, userRepo, roleRepo)
 	subscriptionPlanUC := tenantUsecase.NewSubscriptionPlanUsecase(subscriptionPlanRepo)
-	userUC := userUsecase.NewUserUsecase(userRepo)
+	userUC := userUsecase.NewUserUsecase(userRepo, roleRepo, loginHistoryRepo)
 
-	routes.SetupRoutes(app, tenantUC, subscriptionPlanUC, userUC)
+	routes.SetupRoutes(app, redis, tenantUC, subscriptionPlanUC, userUC)
 
 	log.Fatal(app.Listen(fmt.Sprintf("%s:%s", *host, *port)))
 }

@@ -3,17 +3,17 @@ package handler
 import (
 	"github.com/andrianprasetya/eventHub/internal/shared/response"
 	"github.com/andrianprasetya/eventHub/internal/shared/validation"
-	"github.com/andrianprasetya/eventHub/internal/tenant"
 	"github.com/andrianprasetya/eventHub/internal/tenant/dto/request"
+	"github.com/andrianprasetya/eventHub/internal/tenant/usecase"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 )
 
 type TenantHandler struct {
-	tenantUC tenant.TenantUsecase
+	tenantUC usecase.TenantUsecase
 }
 
-func NewTenantHandler(tenantUC tenant.TenantUsecase) *TenantHandler {
+func NewTenantHandler(tenantUC usecase.TenantUsecase) *TenantHandler {
 	return &TenantHandler{tenantUC: tenantUC}
 }
 

@@ -1,16 +1,20 @@
 package repository
 
 import (
-	"github.com/andrianprasetya/eventHub/internal/tenant"
 	"github.com/andrianprasetya/eventHub/internal/tenant/model"
 	"gorm.io/gorm"
 )
+
+type SubscriptionPlanRepository interface {
+	GetAll() ([]*model.SubscriptionPlan, error)
+	Get(id string) (*model.SubscriptionPlan, error)
+}
 
 type subscriptionPlanRepository struct {
 	DB *gorm.DB
 }
 
-func NewSubscriptionPlanRepository(db *gorm.DB) tenant.SubscriptionPlanRepository {
+func NewSubscriptionPlanRepository(db *gorm.DB) SubscriptionPlanRepository {
 	return &subscriptionPlanRepository{DB: db}
 }
 

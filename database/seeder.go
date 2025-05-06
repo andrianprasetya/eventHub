@@ -1,6 +1,7 @@
 package database
 
 import (
+	"github.com/andrianprasetya/eventHub/internal/shared/utils"
 	modelTenant "github.com/andrianprasetya/eventHub/internal/tenant/model"
 	modelUser "github.com/andrianprasetya/eventHub/internal/user/model"
 	"github.com/google/uuid"
@@ -23,17 +24,14 @@ func SeedUsers(DB *gorm.DB) {
 		{
 			ID:          uuid.New().String(),
 			Name:        "Admin",
+			Slug:        utils.Slugify("Admin"),
 			Description: "Orang yang mengatur Tenant super Admin",
 		},
 		{
 			ID:          uuid.New().String(),
 			Name:        "Organizer",
+			Slug:        utils.Slugify("Organizer"),
 			Description: "Orang yang mengatur Event ",
-		},
-		{
-			ID:          uuid.New().String(),
-			Name:        "Attendee",
-			Description: "Orang yang menghadiri event ",
 		},
 	}
 

@@ -25,16 +25,9 @@ func MigrateDatabase() {
 		&modelTenant.Subscription{},
 
 		//user
-		&modelUser.User{},
 		&modelUser.Role{},
-		&modelUser.Permission{},
-		&modelUser.UserRole{},
-
-		//user
 		&modelUser.User{},
-		&modelUser.Role{},
 		&modelUser.Permission{},
-		&modelUser.UserRole{},
 
 		//Event
 		&modelEvent.Event{},
@@ -43,12 +36,6 @@ func MigrateDatabase() {
 		&modelEvent.EventTag{},
 		&modelEvent.EventCustomField{},
 
-		//Event
-		&modelEvent.Event{},
-		&modelEvent.EventCategory{},
-		&modelEvent.EventSession{},
-		&modelEvent.EventTag{},
-		&modelEvent.EventCustomField{},
 
 		//Ticket
 		&modelTicket.EventTicket{},

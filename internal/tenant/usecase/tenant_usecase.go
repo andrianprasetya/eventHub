@@ -3,31 +3,35 @@ package usecase
 import (
 	"fmt"
 	"github.com/andrianprasetya/eventHub/internal/shared/utils"
-	"github.com/andrianprasetya/eventHub/internal/tenant"
 	"github.com/andrianprasetya/eventHub/internal/tenant/dto/request"
 	modelTenant "github.com/andrianprasetya/eventHub/internal/tenant/model"
-	"github.com/andrianprasetya/eventHub/internal/user"
+	"github.com/andrianprasetya/eventHub/internal/tenant/repository"
 	modelUser "github.com/andrianprasetya/eventHub/internal/user/model"
+	userRepository "github.com/andrianprasetya/eventHub/internal/user/repository"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	"os"
 	"time"
 )
 
+type TenantUsecase interface {
+	RegisterTenant(request request.CreateTenantRequest) error
+}
+
 type tenantUsecase struct {
-	tenantRepo           tenant.TenantRepository
-	subscriptionRepo     tenant.SubscriptionRepository
-	subscriptionPlanRepo tenant.SubscriptionPlanRepository
-	userRepo             user.UserRepository
-	roleRepo             user.RoleRepository
+	tenantRepo           repository.TenantRepository
+	subscriptionRepo     repository.SubscriptionRepository
+	subscriptionPlanRepo repository.SubscriptionPlanRepository
+	userRepo             userRepository.UserRepository
+	roleRepo             userRepository.RoleRepository
 }
 
 func NewTenantUsecase(
-	tenantRepo tenant.TenantRepository,
-	subscriptionRepo tenant.SubscriptionRepository,
-	subscriptionPlanRepo tenant.SubscriptionPlanRepository,
-	userRepo user.UserRepository,
-	roleRepo user.RoleRepository) tenant.TenantUsecase {
+	tenantRepo repository.TenantRepository,
+	subscriptionRepo repository.SubscriptionRepository,
+	subscriptionPlanRepo repository.SubscriptionPlanRepository,
+	userRepo userRepository.UserRepository,
+	roleRepo userRepository.RoleRepository) TenantUsecase {
 	return &tenantUsecase{
 		tenantRepo:           tenantRepo,
 		subscriptionRepo:     subscriptionRepo,
@@ -40,7 +44,7 @@ func NewTenantUsecase(
 func (u tenantUsecase) RegisterTenant(request request.CreateTenantRequest) error {
 	subscriptionPlan, errGetPlan := u.subscriptionPlanRepo.Get(request.SubscriptionPlanID)
 
-	role, errGetRole := u.roleRepo.GetRole("Admin")
+	role, errGetRole := u.roleRepo.GetRole("admin")
 
 	if errGetPlan != nil {
 		log.WithFields(log.Fields{
@@ -94,6 +98,7 @@ func (u tenantUsecase) RegisterTenant(request request.CreateTenantRequest) error
 	user := &modelUser.User{
 		ID:       utils.GenerateID(),
 		TenantID: tenant.ID,
+		RoleID:   role.ID,
 		Name:     request.Name,
 		Email:    request.Email,
 		Password: string(hashedPassword),
@@ -106,17 +111,5 @@ func (u tenantUsecase) RegisterTenant(request request.CreateTenantRequest) error
 		return fmt.Errorf("something Went wrong")
 	}
 
-	userRole := &modelUser.UserRole{
-		ID:     utils.GenerateID(),
-		UserID: user.ID,
-		RoleID: role.ID,
-	}
-
-	if errCreateUserRole := u.roleRepo.CreateUserRole(userRole); errCreateUserRole != nil {
-		log.WithFields(log.Fields{
-			"error": errCreateUserRole,
-		}).Error("failed to create user role")
-		return fmt.Errorf("something Went wrong")
-	}
 	return nil
 }

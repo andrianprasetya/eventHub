@@ -1,26 +1,25 @@
 package repository
 
 import (
-	"github.com/andrianprasetya/eventHub/internal/user"
-	modelUser "github.com/andrianprasetya/eventHub/internal/user/model"
+	"github.com/andrianprasetya/eventHub/internal/user/model"
 	"gorm.io/gorm"
 )
+
+type RoleRepository interface {
+	GetRole(slug string) (*model.Role, error)
+}
 
 type roleRepository struct {
 	DB *gorm.DB
 }
 
-func NewRoleRepository(db *gorm.DB) user.RoleRepository {
+func NewRoleRepository(db *gorm.DB) RoleRepository {
 	return &roleRepository{DB: db}
 }
 
-func (r roleRepository) CreateUserRole(userRole *modelUser.UserRole) error {
-	return r.DB.Create(&userRole).Error
-}
-
-func (r roleRepository) GetRole(name string) (*modelUser.Role, error) {
-	var role modelUser.Role
-	if err := r.DB.First(&role, "name = ?", name).Error; err != nil {
+func (r roleRepository) GetRole(slug string) (*model.Role, error) {
+	var role model.Role
+	if err := r.DB.First(&role, "slug = ?", slug).Error; err != nil {
 		return nil, err
 	}
 	return &role, nil

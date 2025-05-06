@@ -1,16 +1,20 @@
 package usecase
 
 import (
-	"github.com/andrianprasetya/eventHub/internal/tenant"
 	"github.com/andrianprasetya/eventHub/internal/tenant/dto/mapper"
 	"github.com/andrianprasetya/eventHub/internal/tenant/dto/response"
+	"github.com/andrianprasetya/eventHub/internal/tenant/repository"
 )
 
-type subscriptionPlanUsecase struct {
-	subscriptionPlanRepo tenant.SubscriptionPlanRepository
+type SubscriptionPlanUsecase interface {
+	GetAll() ([]*response.SubscriptionPlanListItemResponse, error)
 }
 
-func NewSubscriptionPlanUsecase(subscriptionPlanRepo tenant.SubscriptionPlanRepository) tenant.SubscriptionPlanUsecase {
+type subscriptionPlanUsecase struct {
+	subscriptionPlanRepo repository.SubscriptionPlanRepository
+}
+
+func NewSubscriptionPlanUsecase(subscriptionPlanRepo repository.SubscriptionPlanRepository) SubscriptionPlanUsecase {
 	return &subscriptionPlanUsecase{subscriptionPlanRepo: subscriptionPlanRepo}
 }
 

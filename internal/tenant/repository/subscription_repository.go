@@ -1,16 +1,19 @@
 package repository
 
 import (
-	"github.com/andrianprasetya/eventHub/internal/tenant"
-	model "github.com/andrianprasetya/eventHub/internal/tenant/model"
+	"github.com/andrianprasetya/eventHub/internal/tenant/model"
 	"gorm.io/gorm"
 )
+
+type SubscriptionRepository interface {
+	Create(subscription *model.Subscription) error
+}
 
 type subscriptionRepository struct {
 	DB *gorm.DB
 }
 
-func NewSubscriptionRepository(db *gorm.DB) tenant.SubscriptionRepository {
+func NewSubscriptionRepository(db *gorm.DB) SubscriptionRepository {
 	return &subscriptionRepository{DB: db}
 }
 

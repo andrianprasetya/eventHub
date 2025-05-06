@@ -2,15 +2,15 @@ package handler
 
 import (
 	"github.com/andrianprasetya/eventHub/internal/shared/response"
-	"github.com/andrianprasetya/eventHub/internal/tenant"
+	"github.com/andrianprasetya/eventHub/internal/tenant/usecase"
 	"github.com/gofiber/fiber/v2"
 )
 
 type SubscriptionPlanHandler struct {
-	subscriptionPlanUC tenant.SubscriptionPlanUsecase
+	subscriptionPlanUC usecase.SubscriptionPlanUsecase
 }
 
-func NewSubscriptionPlanHandler(subscriptionPlanUC tenant.SubscriptionPlanUsecase) *SubscriptionPlanHandler {
+func NewSubscriptionPlanHandler(subscriptionPlanUC usecase.SubscriptionPlanUsecase) *SubscriptionPlanHandler {
 	return &SubscriptionPlanHandler{subscriptionPlanUC: subscriptionPlanUC}
 }
 
