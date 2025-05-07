@@ -20,20 +20,25 @@ import (
 
 type UserUsecase interface {
 	Login(ctx context.Context, req request.LoginRequest, ip string) (*response.LoginResponse, error)
-	Create(req request.CreateUserRequest, auth middleware.AuthUser) error
+	Create(req request.CreateUserRequest, auth middleware.AuthUser, method string) error
 }
 
 type userUsecase struct {
-	userRepo repository.UserRepository
-	roleRepo repository.RoleRepository
-	logRepo  logRepository.LoginHistoryRepository
+	userRepo     repository.UserRepository
+	roleRepo     repository.RoleRepository
+	logRepo      logRepository.LoginHistoryRepository
+	activityRepo logRepository.LogActivityRepository
 }
 
-func NewUserUsecase(userRepo repository.UserRepository, roleRepo repository.RoleRepository, logRepo logRepository.LoginHistoryRepository) UserUsecase {
+func NewUserUsecase(userRepo repository.UserRepository,
+	roleRepo repository.RoleRepository,
+	logRepo logRepository.LoginHistoryRepository,
+	activityRepo logRepository.LogActivityRepository) UserUsecase {
 	return &userUsecase{
-		userRepo: userRepo,
-		roleRepo: roleRepo,
-		logRepo:  logRepo,
+		userRepo:     userRepo,
+		roleRepo:     roleRepo,
+		logRepo:      logRepo,
+		activityRepo: activityRepo,
 	}
 }
 
@@ -93,7 +98,7 @@ func (u *userUsecase) Login(ctx context.Context, req request.LoginRequest, ip st
 
 }
 
-func (u *userUsecase) Create(req request.CreateUserRequest, auth middleware.AuthUser) error {
+func (u *userUsecase) Create(req request.CreateUserRequest, auth middleware.AuthUser, method string) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
@@ -123,5 +128,13 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth middleware.Auth
 		}).Error("failed to create user")
 		return fmt.Errorf("something Went wrong")
 	}
+
+	userJSON, errMarshal := json.Marshal(user)
+	if errMarshal != nil {
+		return fmt.Errorf("error marshaling user")
+	}
+
+	helper.LogActivity(u.activityRepo, auth.ID, method, string(userJSON), user.ID)
+
 	return nil
 }

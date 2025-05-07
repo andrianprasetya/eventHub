@@ -33,6 +33,27 @@ func LogLoginHistory(repo repository.LoginHistoryRepository, userId, ip string) 
 	}(log)
 }
 
-func LogActivity(repo repository.LoginHistoryRepository, userId, action, objectType, objectId string) {
+func LogActivity(repo repository.LogActivityRepository, userId, action, objectType, objectId string) {
+	activity := &model.ActivityLog{
+		ID:         utils.GenerateID(),
+		UserID:     userId,
+		Action:     action,
+		ObjectType: objectType,
+		ObjectID:   objectId,
+	}
 
+	go func(activity *model.ActivityLog) {
+		defer func() {
+			if r := recover(); r != nil {
+				logging.WithFields(logging.Fields{
+					"recover": r,
+				}).Error("panic occurred in LogLoginHistory goroutine")
+			}
+		}()
+		if err := repo.Create(activity); err != nil {
+			logging.WithFields(logging.Fields{
+				"error": err,
+			}).Error("failed to Log Activity")
+		}
+	}(activity)
 }

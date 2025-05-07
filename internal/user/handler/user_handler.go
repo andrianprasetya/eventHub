@@ -20,7 +20,7 @@ func NewUserHandler(userUC usecase.UserUsecase) *UserHandler {
 
 func (h *UserHandler) Create(c *fiber.Ctx) error {
 	var req request.CreateUserRequest
-
+	var method = c.Method()
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusUnprocessableEntity).JSON(response.ErrorResponse(err.Error(), nil))
 	}
@@ -33,7 +33,7 @@ func (h *UserHandler) Create(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationResponse(errorMessages))
 	}
 
-	if errRegisterTenant := h.userUC.Create(req, userAuth); errRegisterTenant != nil {
+	if errRegisterTenant := h.userUC.Create(req, userAuth, method); errRegisterTenant != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(errRegisterTenant.Error(), errRegisterTenant))
 	}
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse("User registered successfully"))
