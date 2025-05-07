@@ -7,6 +7,7 @@ import (
 	logRepository "github.com/andrianprasetya/eventHub/internal/audit_security_log/repository"
 	"github.com/andrianprasetya/eventHub/internal/shared/helper"
 	"github.com/andrianprasetya/eventHub/internal/shared/middleware"
+	responseDTO "github.com/andrianprasetya/eventHub/internal/shared/response"
 	"github.com/andrianprasetya/eventHub/internal/shared/utils"
 	"github.com/andrianprasetya/eventHub/internal/user/dto/request"
 	"github.com/andrianprasetya/eventHub/internal/user/dto/response"
@@ -61,14 +62,27 @@ func (u *userUsecase) Login(ctx context.Context, req request.LoginRequest, ip st
 	}
 
 	token, errGenerateJwt := utils.GenerateJWT(req.Email)
-	payload := map[string]interface{}{
-		"id":        getUser.ID,
-		"name":      getUser.Name,
-		"email":     getUser.Email,
-		"tenant":    getUser.Tenant,
-		"role":      getUser.Role,
-		"is_active": getUser.IsActive,
-		"token":     token,
+
+	payload := &middleware.AuthUser{
+		ID:    getUser.ID,
+		Name:  getUser.Name,
+		Email: getUser.Email,
+		Tenant: middleware.TenantPayload{
+			ID:       getUser.Tenant.ID,
+			Name:     getUser.Tenant.Name,
+			Email:    getUser.Tenant.Email,
+			LogoUrl:  getUser.Tenant.ID,
+			Domain:   getUser.Tenant.ID,
+			IsActive: getUser.Tenant.IsActive,
+		},
+		Role: middleware.RolePayload{
+			ID:          getUser.Role.ID,
+			Name:        getUser.Role.Name,
+			Slug:        getUser.Role.Slug,
+			Description: getUser.Role.Description,
+		},
+		IsActive: getUser.IsActive,
+		Token:    token,
 	}
 	data, _ := json.Marshal(payload)
 	key := "user:jwt:" + token
@@ -129,7 +143,16 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth middleware.Auth
 		return fmt.Errorf("something Went wrong")
 	}
 
-	userJSON, errMarshal := json.Marshal(user)
+	userLog := responseDTO.UserLog{
+		ID:       user.ID,
+		TenantID: user.TenantID,
+		RoleID:   user.RoleID,
+		Name:     user.Name,
+		Email:    user.Email,
+		IsActive: user.IsActive,
+	}
+
+	userJSON, errMarshal := json.Marshal(userLog)
 	if errMarshal != nil {
 		return fmt.Errorf("error marshaling user")
 	}

@@ -14,29 +14,25 @@ type AuthUser struct {
 	Name     string        `json:"name"`
 	Email    string        `json:"email"`
 	IsActive int           `json:"is_active"`
-	Tenant   RolePayload   `json:"tenant"`
-	Role     TenantPayload `json:"role"`
+	Tenant   TenantPayload `json:"tenant"`
+	Role     RolePayload   `json:"role"`
 	Token    string        `json:"token"`
 }
 
 type RolePayload struct {
-	ID          string `json:"ID"`
-	Name        string `json:"Name"`
-	Slug        string `json:"Slug"`
-	Description string `json:"Description"`
-	CreatedAt   string `json:"CreatedAt"`
-	UpdatedAt   string `json:"UpdatedAt"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Slug        string `json:"slug"`
+	Description string `json:"description"`
 }
 
 type TenantPayload struct {
-	ID        string `json:"ID"`
-	Name      string `json:"Name"`
-	Email     string `json:"Email"`
-	LogoUrl   string `json:"LogoUrl"`
-	Domain    string `json:"Domain"`
-	IsActive  int    `json:"IsActive"`
-	CreatedAt string `json:"CreatedAt"`
-	UpdatedAt string `json:"UpdatedAt"`
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	LogoUrl  string `json:"logo_url"`
+	Domain   string `json:"domain"`
+	IsActive int    `json:"is_active"`
 }
 
 func AuthMiddleware(redis redisser.RedisClient) fiber.Handler {

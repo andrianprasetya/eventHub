@@ -37,11 +37,12 @@ func main() {
 	userRepo := userRepository.NewUserRepository(db)
 	roleRepo := userRepository.NewRoleRepository(db)
 	loginHistoryRepo := logRepository.NewLoginHistoryRepository(db)
+	logActivityRepo := logRepository.NewLogActivityRepository(db)
 
 	//Usecase
 	tenantUC := tenantUsecase.NewTenantUsecase(tenantRepo, subscriptionRepo, subscriptionPlanRepo, userRepo, roleRepo)
 	subscriptionPlanUC := tenantUsecase.NewSubscriptionPlanUsecase(subscriptionPlanRepo)
-	userUC := userUsecase.NewUserUsecase(userRepo, roleRepo, loginHistoryRepo)
+	userUC := userUsecase.NewUserUsecase(userRepo, roleRepo, loginHistoryRepo, logActivityRepo)
 
 	routes.SetupRoutes(app, redis, tenantUC, subscriptionPlanUC, userUC)
 
