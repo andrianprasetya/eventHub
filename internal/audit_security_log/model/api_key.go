@@ -7,7 +7,7 @@ type ApiKey struct {
 	TenantID    string `gorm:"type:varchar(50);not null;index"`
 	ApiKey      string `gorm:"type:varchar(255);not null"`
 	Description string `gorm:"type:text"`
-	Status      string `gorm:"type:varchar(15);not null;comment: inactive | active"`
+	Status      int    `gorm:"type:smallint;default:0;comment: 0 => in-active | 1 => active"`
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }

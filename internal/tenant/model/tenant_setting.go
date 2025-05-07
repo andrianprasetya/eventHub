@@ -7,6 +7,7 @@ type TenantSetting struct {
 	TenantID  string `gorm:"type:varchar(50);not null;index"`
 	Key       string `gorm:"type:varchar(50);not null;index"`
 	Value     string `gorm:"type:text;not null"`
+	Tenant    Tenant `gorm:"foreignKey:TenantID;references:ID"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

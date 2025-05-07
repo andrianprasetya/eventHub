@@ -157,7 +157,7 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth middleware.Auth
 		return fmt.Errorf("error marshaling user")
 	}
 
-	helper.LogActivity(u.activityRepo, auth.ID, method, string(userJSON), user.ID)
+	helper.LogActivity(u.activityRepo, auth.ID, method, string(userJSON), "user", user.ID)
 
 	return nil
 }

@@ -9,6 +9,7 @@ type Subscription struct {
 	StartDate time.Time `gorm:"type:date;not null"`
 	EndDate   time.Time `gorm:"type:date;not null"`
 	IsActive  int       `gorm:"type:smallint;default:0;comment: 0 => in-active | 1 => active"`
+	Tenant    Tenant    `gorm:"foreignKey:TenantID;references:ID"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

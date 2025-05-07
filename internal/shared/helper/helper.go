@@ -33,11 +33,12 @@ func LogLoginHistory(repo repository.LoginHistoryRepository, userId, ip string) 
 	}(log)
 }
 
-func LogActivity(repo repository.LogActivityRepository, userId, action, objectType, objectId string) {
+func LogActivity(repo repository.LogActivityRepository, userId, action, objectData, objectType, objectId string) {
 	activity := &model.ActivityLog{
 		ID:         utils.GenerateID(),
 		UserID:     userId,
 		Action:     action,
+		ObjectData: objectData,
 		ObjectType: objectType,
 		ObjectID:   objectId,
 	}
