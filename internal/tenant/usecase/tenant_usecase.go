@@ -16,6 +16,7 @@ import (
 
 type TenantUsecase interface {
 	RegisterTenant(request request.CreateTenantRequest) error
+	Update(id string, request request.UpdateTenantRequest) error
 }
 
 type tenantUsecase struct {
@@ -69,7 +70,6 @@ func (u tenantUsecase) RegisterTenant(request request.CreateTenantRequest) error
 		Name:     request.Name,
 		Email:    request.Email,
 		LogoUrl:  request.LogoUrl,
-		Domain:   request.Domain,
 		IsActive: 1,
 	}
 
@@ -108,6 +108,29 @@ func (u tenantUsecase) RegisterTenant(request request.CreateTenantRequest) error
 		log.WithFields(log.Fields{
 			"error": errCreateUser,
 		}).Error("failed to create user")
+		return fmt.Errorf("something Went wrong")
+	}
+
+	return nil
+}
+
+func (u tenantUsecase) Update(id string, req request.UpdateTenantRequest) error {
+	tenant, errGetTenant := u.tenantRepo.GetByID(id)
+
+	if errGetTenant != nil {
+		log.WithFields(log.Fields{
+			"error": errGetTenant,
+		}).Error("failed to get tenant")
+		return fmt.Errorf("something Went wrong")
+	}
+
+	tenant.Name = req.Name
+	tenant.LogoUrl = req.LogoUrl
+
+	if err := u.tenantRepo.Update(tenant); err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("failed to update tenant")
 		return fmt.Errorf("something Went wrong")
 	}
 

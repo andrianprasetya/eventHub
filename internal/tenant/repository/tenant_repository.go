@@ -7,6 +7,8 @@ import (
 
 type TenantRepository interface {
 	Create(tenant *model.Tenant) error
+	GetByID(id string) (*model.Tenant, error)
+	Update(tenant *model.Tenant) error
 }
 
 type tenantRepository struct {
@@ -19,4 +21,14 @@ func NewTenantRepository(db *gorm.DB) TenantRepository {
 
 func (r tenantRepository) Create(tenant *model.Tenant) error {
 	return r.DB.Create(tenant).Error
+}
+
+func (r tenantRepository) GetByID(id string) (*model.Tenant, error) {
+	var tenant model.Tenant
+	err := r.DB.First(&tenant, "id = ?", id).Error
+	return &tenant, err
+}
+
+func (r tenantRepository) Update(tenant *model.Tenant) error {
+	return r.DB.Save(tenant).Error
 }

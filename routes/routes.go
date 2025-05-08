@@ -32,6 +32,11 @@ func SetupRoutes(c *fiber.App,
 
 	auth.Post("/issueToken", authHandler.Login)
 	user.Post("/create", userHandler.Create)
+
+	//tenant
 	tenant.Post("/register", tenantHandler.RegisterTenant)
+	tenant.Post("/update/:id", tenantHandler.UpdateTenant)
+
+	//subscription
 	subscription.Get("/get-plan", subscriptionPlanHandler.GetAll)
 }

@@ -35,5 +35,24 @@ func (h *TenantHandler) RegisterTenant(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse("Tenant registered successfully"))
+}
 
+func (h *TenantHandler) UpdateTenant(c *fiber.Ctx) error {
+	var req request.UpdateTenantRequest
+	var id = c.Params("id")
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(response.ErrorResponse(err.Error(), nil))
+	}
+
+	if errValidation := validation.NewValidator().Validate(&req); errValidation != nil {
+		errs := errValidation.(validator.ValidationErrors)
+		errorMessages := validation.MapValidationErrorsToJSONTags(req, errs)
+		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationResponse(errorMessages))
+	}
+
+	if errUpdateTenant := h.tenantUC.Update(id, req); errUpdateTenant != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(errUpdateTenant.Error(), errUpdateTenant))
+	}
+	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse("Tenant updated successfully"))
 }
