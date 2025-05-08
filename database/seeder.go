@@ -4,7 +4,6 @@ import (
 	"github.com/andrianprasetya/eventHub/internal/shared/utils"
 	modelTenant "github.com/andrianprasetya/eventHub/internal/tenant/model"
 	modelUser "github.com/andrianprasetya/eventHub/internal/user/model"
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"log"
 )
@@ -22,13 +21,13 @@ func SeedUsers(DB *gorm.DB) {
 
 	roles := []modelUser.Role{
 		{
-			ID:          uuid.New().String(),
+			ID:          utils.GenerateID(),
 			Name:        "Admin",
 			Slug:        utils.Slugify("Admin"),
 			Description: "Orang yang mengatur Tenant super Admin",
 		},
 		{
-			ID:          uuid.New().String(),
+			ID:          utils.GenerateID(),
 			Name:        "Organizer",
 			Slug:        utils.Slugify("Organizer"),
 			Description: "Orang yang mengatur Event ",
@@ -37,19 +36,19 @@ func SeedUsers(DB *gorm.DB) {
 
 	subscriptionPlans := []modelTenant.SubscriptionPlan{
 		{
-			ID:          uuid.New().String(),
+			ID:          utils.GenerateID(),
 			Name:        "Free",
 			Price:       0,
 			DurationDay: 30,
 		},
 		{
-			ID:          uuid.New().String(),
+			ID:          utils.GenerateID(),
 			Name:        "Basic",
 			Price:       5000,
 			DurationDay: 30,
 		},
 		{
-			ID:          uuid.New().String(),
+			ID:          utils.GenerateID(),
 			Name:        "Premium",
 			Price:       20000,
 			DurationDay: 30,
