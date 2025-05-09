@@ -20,7 +20,6 @@ func MigrateDatabase() {
 	err := db.AutoMigrate(
 		//tenant
 		&modelTenant.Tenant{},
-		&modelTenant.TenantSetting{},
 		&modelTenant.SubscriptionPlan{},
 		&modelTenant.Subscription{},
 
@@ -35,7 +34,6 @@ func MigrateDatabase() {
 		&modelEvent.EventSession{},
 		&modelEvent.EventTag{},
 		&modelEvent.EventCustomField{},
-
 
 		//Ticket
 		&modelTicket.EventTicket{},

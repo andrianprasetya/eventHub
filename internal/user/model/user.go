@@ -8,7 +8,7 @@ import (
 
 type User struct {
 	ID        string             `gorm:"type:varchar(50);primary_key:true"`
-	TenantID  string             `gorm:"type:varchar(50);not null"`
+	TenantID  string             `gorm:"type:varchar(50);default:null"`
 	RoleID    string             `gorm:"type:varchar(50);not null"`
 	Name      string             `gorm:"type:varchar(100);not null;index"`
 	Email     string             `gorm:"type:varchar(50);not null;unique"`

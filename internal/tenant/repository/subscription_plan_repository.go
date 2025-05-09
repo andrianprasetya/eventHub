@@ -6,6 +6,7 @@ import (
 )
 
 type SubscriptionPlanRepository interface {
+	Create(subscription *model.SubscriptionPlan) error
 	GetAll() ([]*model.SubscriptionPlan, error)
 	Get(id string) (*model.SubscriptionPlan, error)
 }
@@ -16,6 +17,10 @@ type subscriptionPlanRepository struct {
 
 func NewSubscriptionPlanRepository(db *gorm.DB) SubscriptionPlanRepository {
 	return &subscriptionPlanRepository{DB: db}
+}
+
+func (r subscriptionPlanRepository) Create(subscription *model.SubscriptionPlan) error {
+	return r.DB.Create(subscription).Error
 }
 
 func (r subscriptionPlanRepository) GetAll() ([]*model.SubscriptionPlan, error) {
