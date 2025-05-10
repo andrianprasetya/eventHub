@@ -1,0 +1,47 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Output of the go coverage tool
+*.coverprofile
+
+# Dependency directories (remove the comment below if you use Go modules)
+vendor/
+
+# Go workspace files
+go.work
+go.work.sum
+
+# IDE/editor folders
+.vscode/
+.idea/
+*.swp
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# dotenv / sensitive files
+.env
+
+# Binary output from builds (if you put binaries in a build/ or bin/ directory)
+bin/
+build/
+dist/
+
+# GoLand specific
+*.iml
+out/
+
+# Temporary or backup files
+*.tmp
+*.bak
+*.old
