@@ -61,3 +61,24 @@ func AuthMiddleware(redis redisser.RedisClient) fiber.Handler {
 		return c.Next()
 	}
 }
+
+func RequireRole(roles ...string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		authUser := c.Locals("user") // assuming you already store the user info in Locals after auth
+
+		if authUser == nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(response.ErrorResponse("Unauthorized", nil))
+		}
+
+		// assume user struct has a Role field like: authUser.(User).Role
+		user := authUser.(AuthUser) // You can define your own struct or DTO
+
+		for _, role := range roles {
+			if role == user.Role.Slug {
+				return c.Next()
+			}
+		}
+
+		return c.Status(fiber.StatusForbidden).JSON(response.ErrorResponse("Forbidden: insufficient permissions", nil))
+	}
+}

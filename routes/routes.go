@@ -20,23 +20,32 @@ func SetupRoutes(c *fiber.App,
 	subscriptionPlanHandler := TH.NewSubscriptionPlanHandler(subscriptionPlanUC)
 	authHandler := UH.NewAuthHandler(userUC)
 	userHandler := UH.NewUserHandler(userUC)
-	api := c.Group("/api")
-	auth := c.Group("/auth")
-	v1 := api.Group("/v1")
+
+	//without auth
+	apiWithoutAuth := c.Group("/api")
+	v1WithoutAuth := apiWithoutAuth.Group("/v1")
+
+	//with auth
+	apiWithAuth := c.Group("/api", middleware.AuthMiddleware(redisClient))
+	v1WithAuth := apiWithAuth.Group("/v1")
+
+	domain := v1WithAuth.Group("/:domain")
 
 	//tenant routes
-	tenant := v1.Group("/tenant")
-	subscription := v1.Group("/subscription")
+	user := domain.Group("/user")
+	tenant := domain.Group("/tenant")
+	subscriptionWithoutAuth := v1WithoutAuth.Group("/subscription")
+	subscriptionWithAuth := v1WithAuth.Group("/subscription")
 
-	user := v1.Group("/user", middleware.AuthMiddleware(redisClient))
+	apiWithoutAuth.Post("/issueToken", authHandler.Login)
+	apiWithoutAuth.Post("/register-tenant", tenantHandler.RegisterTenant)
 
-	auth.Post("/issueToken", authHandler.Login)
 	user.Post("/create", userHandler.Create)
 
 	//tenant
-	tenant.Post("/register", tenantHandler.RegisterTenant)
 	tenant.Post("/update/:id", tenantHandler.UpdateTenant)
 
 	//subscription
-	subscription.Get("/get-plan", subscriptionPlanHandler.GetAll)
+	subscriptionWithAuth.Post("create", subscriptionPlanHandler.Create, middleware.RequireRole("super-admin"))
+	subscriptionWithoutAuth.Get("/get-plan", subscriptionPlanHandler.GetAll)
 }

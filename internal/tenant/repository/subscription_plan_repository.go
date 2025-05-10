@@ -6,9 +6,10 @@ import (
 )
 
 type SubscriptionPlanRepository interface {
-	Create(subscription *model.SubscriptionPlan) error
+	Create(subscriptionPlan *model.SubscriptionPlan) error
 	GetAll() ([]*model.SubscriptionPlan, error)
 	Get(id string) (*model.SubscriptionPlan, error)
+	Update(subscriptionPlan *model.SubscriptionPlan) error
 }
 
 type subscriptionPlanRepository struct {
@@ -19,11 +20,11 @@ func NewSubscriptionPlanRepository(db *gorm.DB) SubscriptionPlanRepository {
 	return &subscriptionPlanRepository{DB: db}
 }
 
-func (r subscriptionPlanRepository) Create(subscription *model.SubscriptionPlan) error {
-	return r.DB.Create(subscription).Error
+func (r *subscriptionPlanRepository) Create(subscriptionPlan *model.SubscriptionPlan) error {
+	return r.DB.Create(subscriptionPlan).Error
 }
 
-func (r subscriptionPlanRepository) GetAll() ([]*model.SubscriptionPlan, error) {
+func (r *subscriptionPlanRepository) GetAll() ([]*model.SubscriptionPlan, error) {
 	var subscriptionPlans []*model.SubscriptionPlan
 	if err := r.DB.Find(&subscriptionPlans).Error; err != nil {
 		return nil, err
@@ -31,10 +32,14 @@ func (r subscriptionPlanRepository) GetAll() ([]*model.SubscriptionPlan, error) 
 	return subscriptionPlans, nil
 }
 
-func (r subscriptionPlanRepository) Get(id string) (*model.SubscriptionPlan, error) {
+func (r *subscriptionPlanRepository) Get(id string) (*model.SubscriptionPlan, error) {
 	var subscriptionPlan model.SubscriptionPlan
 	if err := r.DB.First(&subscriptionPlan, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
 	return &subscriptionPlan, nil
+}
+
+func (r *subscriptionPlanRepository) Update(subscriptionPlan *model.SubscriptionPlan) error {
+	return r.DB.Save(subscriptionPlan).Error
 }
