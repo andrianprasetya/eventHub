@@ -7,6 +7,7 @@ import (
 	logRepository "github.com/andrianprasetya/eventHub/internal/audit_security_log/repository"
 	"github.com/andrianprasetya/eventHub/internal/shared/helper"
 	"github.com/andrianprasetya/eventHub/internal/shared/middleware"
+	repositoryShared "github.com/andrianprasetya/eventHub/internal/shared/repository"
 	responseDTO "github.com/andrianprasetya/eventHub/internal/shared/response"
 	"github.com/andrianprasetya/eventHub/internal/shared/utils"
 	"github.com/andrianprasetya/eventHub/internal/user/dto/request"
@@ -25,13 +26,16 @@ type UserUsecase interface {
 }
 
 type userUsecase struct {
+	txManager    repositoryShared.TxManager
 	userRepo     repository.UserRepository
 	roleRepo     repository.RoleRepository
 	logRepo      logRepository.LoginHistoryRepository
 	activityRepo logRepository.LogActivityRepository
 }
 
-func NewUserUsecase(userRepo repository.UserRepository,
+func NewUserUsecase(
+	txManager repositoryShared.TxManager,
+	userRepo repository.UserRepository,
 	roleRepo repository.RoleRepository,
 	logRepo logRepository.LoginHistoryRepository,
 	activityRepo logRepository.LogActivityRepository) UserUsecase {
@@ -40,11 +44,11 @@ func NewUserUsecase(userRepo repository.UserRepository,
 		roleRepo:     roleRepo,
 		logRepo:      logRepo,
 		activityRepo: activityRepo,
+		txManager:    txManager,
 	}
 }
 
 func (u *userUsecase) Login(ctx context.Context, req request.LoginRequest, ip string) (*response.LoginResponse, error) {
-
 	getUser, errGetUser := u.userRepo.GetByEmail(req.Email)
 
 	if errGetUser != nil {
@@ -113,17 +117,33 @@ func (u *userUsecase) Login(ctx context.Context, req request.LoginRequest, ip st
 }
 
 func (u *userUsecase) Create(req request.CreateUserRequest, auth middleware.AuthUser, method string) error {
+	tx := u.txManager.Begin()
+
+	var err error
+
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			log.WithFields(log.Fields{
+				"error": r,
+			}).Error("Failed to create user  (panic recovered)")
+			err = fmt.Errorf("something went wrong")
+		} else if err != nil {
+			tx.Rollback()
+		}
+	}()
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
-	role, errGetRole := u.roleRepo.GetRole("organizer")
+	role, err := u.roleRepo.GetRole("organizer")
 
-	if errGetRole != nil {
+	if err != nil {
 		log.WithFields(log.Fields{
-			"error": errGetRole,
+			"error": err,
 		}).Error("failed to get Role")
-		return errGetRole
+		return err
 	}
 
 	user := &modelUser.User{
@@ -136,9 +156,9 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth middleware.Auth
 		IsActive: 1,
 	}
 
-	if errCreateUser := u.userRepo.Create(user); errCreateUser != nil {
+	if err = u.userRepo.Create(tx, user); err != nil {
 		log.WithFields(log.Fields{
-			"error": errCreateUser,
+			"error": err,
 		}).Error("failed to create user")
 		return fmt.Errorf("something Went wrong")
 	}
@@ -152,12 +172,12 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth middleware.Auth
 		IsActive: user.IsActive,
 	}
 
-	userJSON, errMarshal := json.Marshal(userLog)
-	if errMarshal != nil {
+	userJSON, err := json.Marshal(userLog)
+	if err != nil {
 		return fmt.Errorf("error marshaling user")
 	}
 
-	helper.LogActivity(u.activityRepo, auth.ID, method, string(userJSON), "user", user.ID)
-
-	return nil
+	helper.LogActivity(tx, u.activityRepo, auth.ID, method, string(userJSON), "user", user.ID)
+	err = tx.Commit().Error
+	return err
 }

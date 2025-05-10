@@ -6,6 +6,7 @@ import (
 	_ "github.com/andrianprasetya/eventHub/database/dialect/postgres"
 	logRepository "github.com/andrianprasetya/eventHub/internal/audit_security_log/repository"
 	_ "github.com/andrianprasetya/eventHub/internal/shared/config"
+	repositoryShared "github.com/andrianprasetya/eventHub/internal/shared/repository"
 	tenantRepository "github.com/andrianprasetya/eventHub/internal/tenant/repository"
 	tenantUsecase "github.com/andrianprasetya/eventHub/internal/tenant/usecase"
 	userRepository "github.com/andrianprasetya/eventHub/internal/user/repository"
@@ -31,7 +32,9 @@ func main() {
 	redis := appServer.InitRedis()
 
 	//Repository
+	txManager := &repositoryShared.GormTxManager{DB: db}
 	tenantRepo := tenantRepository.NewTenantRepository(db)
+	tenantSettingRepo := tenantRepository.NewTenantSettingRepository(db)
 	subscriptionRepo := tenantRepository.NewSubscriptionRepository(db)
 	subscriptionPlanRepo := tenantRepository.NewSubscriptionPlanRepository(db)
 	userRepo := userRepository.NewUserRepository(db)
@@ -40,9 +43,9 @@ func main() {
 	logActivityRepo := logRepository.NewLogActivityRepository(db)
 
 	//Usecase
-	tenantUC := tenantUsecase.NewTenantUsecase(tenantRepo, subscriptionRepo, subscriptionPlanRepo, userRepo, roleRepo)
+	tenantUC := tenantUsecase.NewTenantUsecase(txManager, tenantRepo, tenantSettingRepo, subscriptionRepo, subscriptionPlanRepo, userRepo, roleRepo)
 	subscriptionPlanUC := tenantUsecase.NewSubscriptionPlanUsecase(subscriptionPlanRepo)
-	userUC := userUsecase.NewUserUsecase(userRepo, roleRepo, loginHistoryRepo, logActivityRepo)
+	userUC := userUsecase.NewUserUsecase(txManager, userRepo, roleRepo, loginHistoryRepo, logActivityRepo)
 
 	routes.SetupRoutes(app, redis, tenantUC, subscriptionPlanUC, userUC)
 
