@@ -65,7 +65,7 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 		}
 	}()
 
-	subscriptionPlan, err := u.subscriptionPlanRepo.Get(request.SubscriptionPlanID)
+	subscriptionPlan, err := u.subscriptionPlanRepo.GetById(request.SubscriptionPlanID)
 
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -174,8 +174,12 @@ func (u *tenantUsecase) Update(id string, req request.UpdateTenantRequest) error
 		return fmt.Errorf("something Went wrong")
 	}
 
-	tenant.Name = req.Name
-	tenant.LogoUrl = req.LogoUrl
+	if req.Name != nil {
+		tenant.Name = *req.Name
+	}
+	if req.LogoUrl != nil {
+		tenant.LogoUrl = *req.LogoUrl
+	}
 
 	if err := u.tenantRepo.Update(tenant); err != nil {
 		log.WithFields(log.Fields{

@@ -17,6 +17,6 @@ func NewTenantSettingRepository(db *gorm.DB) TenantSettingRepository {
 	return &tenantSettingRepository{DB: db}
 }
 
-func (t *tenantSettingRepository) CreateBulk(tx *gorm.DB, tenantSettings []*modelTenant.TenantSetting) error {
+func (r *tenantSettingRepository) CreateBulk(tx *gorm.DB, tenantSettings []*modelTenant.TenantSetting) error {
 	return tx.Create(tenantSettings).Error
 }

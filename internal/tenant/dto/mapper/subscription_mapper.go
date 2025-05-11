@@ -7,9 +7,22 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-/*func FromUserModel(tenant *model2.Tenant) *response2.TenantResponse {
-	return &response2.TenantResponse{}
-}*/
+func FromUserModel(subscriptionPlan *model.SubscriptionPlan) *response.SubscriptionPlanResponse {
+	feature, err := utils.ToStringJSON(subscriptionPlan.Feature)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("failed to un-marshal string feature")
+	}
+
+	return &response.SubscriptionPlanResponse{
+		ID:          subscriptionPlan.ID,
+		Name:        subscriptionPlan.Name,
+		Price:       subscriptionPlan.Price,
+		Feature:     feature,
+		DurationDay: subscriptionPlan.DurationDay,
+	}
+}
 
 func FromSubscriptionPlanToListItem(subscriptionPlan *model.SubscriptionPlan) *response.SubscriptionPlanListItemResponse {
 	feature, err := utils.ToStringJSON(subscriptionPlan.Feature)

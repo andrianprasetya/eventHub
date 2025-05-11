@@ -22,23 +22,25 @@ func SetupRoutes(c *fiber.App,
 	userHandler := UH.NewUserHandler(userUC)
 
 	//without auth
-	apiWithoutAuth := c.Group("/api")
-	v1WithoutAuth := apiWithoutAuth.Group("/v1")
+	v1ApiPublic := c.Group("/api/v1")
+
+	v1ApiPublic.Post("/issueToken", authHandler.Login)
+	v1ApiPublic.Post("/register-tenant", tenantHandler.RegisterTenant)
+
+	subscriptionPublic := v1ApiPublic.Group("/subscription")
+	subscriptionPublic.Get("/get-plan-all", subscriptionPlanHandler.GetAll)
+	subscriptionPublic.Get("/get-plan/:id", subscriptionPlanHandler.Get)
 
 	//with auth
-	apiWithAuth := c.Group("/api", middleware.AuthMiddleware(redisClient))
-	v1WithAuth := apiWithAuth.Group("/v1")
+	v1ApiPrivate := c.Group("/api/v1", middleware.AuthMiddleware(redisClient))
 
-	domain := v1WithAuth.Group("/:domain")
+	domain := v1ApiPrivate.Group("/:domain")
 
 	//tenant routes
 	user := domain.Group("/user")
 	tenant := domain.Group("/tenant")
-	subscriptionWithoutAuth := v1WithoutAuth.Group("/subscription")
-	subscriptionWithAuth := v1WithAuth.Group("/subscription")
 
-	apiWithoutAuth.Post("/issueToken", authHandler.Login)
-	apiWithoutAuth.Post("/register-tenant", tenantHandler.RegisterTenant)
+	subscriptionPrivate := domain.Group("/subscription")
 
 	user.Post("/create", userHandler.Create)
 
@@ -46,6 +48,8 @@ func SetupRoutes(c *fiber.App,
 	tenant.Post("/update/:id", tenantHandler.UpdateTenant)
 
 	//subscription
-	subscriptionWithAuth.Post("create", subscriptionPlanHandler.Create, middleware.RequireRole("super-admin"))
-	subscriptionWithoutAuth.Get("/get-plan", subscriptionPlanHandler.GetAll)
+	subscriptionPrivate.Post("/create", subscriptionPlanHandler.Create, middleware.RequireRole("super-admin"))
+	subscriptionPrivate.Post("/update/:id", subscriptionPlanHandler.Update, middleware.RequireRole("super-admin"))
+	subscriptionPrivate.Delete("/delete/:id", subscriptionPlanHandler.Delete, middleware.RequireRole("super-admin"))
+
 }

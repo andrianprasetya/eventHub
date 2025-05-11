@@ -75,8 +75,8 @@ func (u *userUsecase) Login(ctx context.Context, req request.LoginRequest, ip st
 			ID:       getUser.Tenant.ID,
 			Name:     getUser.Tenant.Name,
 			Email:    getUser.Tenant.Email,
-			LogoUrl:  getUser.Tenant.ID,
-			Domain:   getUser.Tenant.ID,
+			LogoUrl:  getUser.Tenant.LogoUrl,
+			Domain:   getUser.Tenant.Domain,
 			IsActive: getUser.Tenant.IsActive,
 		},
 		Role: middleware.RolePayload{
@@ -108,10 +108,11 @@ func (u *userUsecase) Login(ctx context.Context, req request.LoginRequest, ip st
 	helper.LogLoginHistory(u.logRepo, getUser.ID, ip)
 
 	return &response.LoginResponse{
-		AccessToken: token,
-		Exp:         10 * 60,
-		TokenType:   "Bearer",
-		Username:    req.Email,
+		AccessToken:  token,
+		Exp:          10 * 60,
+		TokenType:    "Bearer",
+		Username:     req.Email,
+		TenantDomain: getUser.Tenant.Domain,
 	}, nil
 
 }

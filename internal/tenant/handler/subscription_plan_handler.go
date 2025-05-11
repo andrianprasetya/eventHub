@@ -19,9 +19,19 @@ func NewSubscriptionPlanHandler(subscriptionPlanUC usecase.SubscriptionPlanUseca
 }
 
 func (h *SubscriptionPlanHandler) GetAll(c *fiber.Ctx) error {
-	subscriptionPlan, errRegisterTenant := h.subscriptionPlanUC.GetAll()
-	if errRegisterTenant != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(errRegisterTenant.Error(), errRegisterTenant))
+	subscriptionPlan, err := h.subscriptionPlanUC.GetAll()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(err.Error(), err))
+	}
+
+	return c.Status(fiber.StatusOK).JSON(response.SuccessWithDataResponse("Get Subscription Plan successfully", subscriptionPlan))
+}
+
+func (h *SubscriptionPlanHandler) Get(c *fiber.Ctx) error {
+	id := c.Params("id")
+	subscriptionPlan, err := h.subscriptionPlanUC.GetByID(id)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(err.Error(), err))
 	}
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessWithDataResponse("Get Subscription Plan successfully", subscriptionPlan))
@@ -39,10 +49,35 @@ func (h *SubscriptionPlanHandler) Create(c *fiber.Ctx) error {
 		errorMessages := validation.MapValidationErrorsToJSONTags(req, errs)
 		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationResponse(errorMessages))
 	}
-
-	if err := h.subscriptionPlanUC.Create(req, userAuth); err != nil {
+	subscriptionPlan, err := h.subscriptionPlanUC.Create(req, userAuth)
+	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(err.Error(), err))
 	}
 
-	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse("Subscription Plan created successfully"))
+	return c.Status(fiber.StatusOK).JSON(response.SuccessWithDataResponse("Create Subscription Plan successfully", subscriptionPlan))
+}
+
+func (h *SubscriptionPlanHandler) Update(c *fiber.Ctx) error {
+	var req request.UpdateSubscriptionPlanRequest
+	id := c.Params("id")
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(response.ErrorResponse(err.Error(), nil))
+	}
+
+	subscriptionPlan, err := h.subscriptionPlanUC.Update(id, req)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(err.Error(), err))
+	}
+
+	return c.Status(fiber.StatusOK).JSON(response.SuccessWithDataResponse("Create Subscription Plan successfully", subscriptionPlan))
+}
+
+func (h *SubscriptionPlanHandler) Delete(c *fiber.Ctx) error {
+	id := c.Params("id")
+
+	if err := h.subscriptionPlanUC.Delete(id); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(err.Error(), err))
+	}
+	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse("Create Subscription Plan successfully"))
 }

@@ -1,6 +1,6 @@
 package request
 
 type UpdateTenantRequest struct {
-	Name    string `json:"name" validate:"required"`
-	LogoUrl string `json:"logo_url" validate:"required"`
+	Name    *string `json:"name"`
+	LogoUrl *string `json:"logo_url"`
 }

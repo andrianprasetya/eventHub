@@ -8,8 +8,9 @@ import (
 type SubscriptionPlanRepository interface {
 	Create(subscriptionPlan *model.SubscriptionPlan) error
 	GetAll() ([]*model.SubscriptionPlan, error)
-	Get(id string) (*model.SubscriptionPlan, error)
+	GetById(id string) (*model.SubscriptionPlan, error)
 	Update(subscriptionPlan *model.SubscriptionPlan) error
+	Delete(id string) error
 }
 
 type subscriptionPlanRepository struct {
@@ -32,7 +33,7 @@ func (r *subscriptionPlanRepository) GetAll() ([]*model.SubscriptionPlan, error)
 	return subscriptionPlans, nil
 }
 
-func (r *subscriptionPlanRepository) Get(id string) (*model.SubscriptionPlan, error) {
+func (r *subscriptionPlanRepository) GetById(id string) (*model.SubscriptionPlan, error) {
 	var subscriptionPlan model.SubscriptionPlan
 	if err := r.DB.First(&subscriptionPlan, "id = ?", id).Error; err != nil {
 		return nil, err
@@ -42,4 +43,8 @@ func (r *subscriptionPlanRepository) Get(id string) (*model.SubscriptionPlan, er
 
 func (r *subscriptionPlanRepository) Update(subscriptionPlan *model.SubscriptionPlan) error {
 	return r.DB.Save(subscriptionPlan).Error
+}
+
+func (r *subscriptionPlanRepository) Delete(id string) error {
+	return r.DB.Where("id = ?", id).Delete(&model.SubscriptionPlan{}).Error
 }
