@@ -6,7 +6,7 @@ import (
 )
 
 type EventRepository interface {
-	Create(event *model.Event) error
+	Create(tx *gorm.DB, event *model.Event) error
 }
 
 type eventRepository struct {
@@ -17,6 +17,6 @@ func NewEventRepository(db *gorm.DB) EventRepository {
 	return &eventRepository{DB: db}
 }
 
-func (r eventRepository) Create(event *model.Event) error {
+func (r eventRepository) Create(tx *gorm.DB, event *model.Event) error {
 	return r.DB.Create(event).Error
 }

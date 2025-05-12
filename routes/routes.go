@@ -1,6 +1,8 @@
 package routes
 
 import (
+	EH "github.com/andrianprasetya/eventHub/internal/event/handler"
+	eventUsecase "github.com/andrianprasetya/eventHub/internal/event/usecase"
 	"github.com/andrianprasetya/eventHub/internal/shared/middleware"
 	"github.com/andrianprasetya/eventHub/internal/shared/redisser"
 	TH "github.com/andrianprasetya/eventHub/internal/tenant/handler"
@@ -14,12 +16,14 @@ func SetupRoutes(c *fiber.App,
 	redisClient redisser.RedisClient,
 	tenantUC tenantUsecase.TenantUsecase,
 	subscriptionPlanUC tenantUsecase.SubscriptionPlanUsecase,
-	userUC userUsecase.UserUsecase) {
+	userUC userUsecase.UserUsecase,
+	eventUC eventUsecase.EventUsecase) {
 
 	tenantHandler := TH.NewTenantHandler(tenantUC)
 	subscriptionPlanHandler := TH.NewSubscriptionPlanHandler(subscriptionPlanUC)
 	authHandler := UH.NewAuthHandler(userUC)
 	userHandler := UH.NewUserHandler(userUC)
+	eventHandler := EH.NewEventHandler(eventUC)
 
 	//without auth
 	v1ApiPublic := c.Group("/api/v1")
@@ -36,12 +40,13 @@ func SetupRoutes(c *fiber.App,
 
 	domain := v1ApiPrivate.Group("/:domain")
 
-	//tenant routes
+	//domain groups
 	user := domain.Group("/user")
 	tenant := domain.Group("/tenant")
-
+	event := domain.Group("/event")
 	subscriptionPrivate := domain.Group("/subscription")
 
+	//user
 	user.Post("/create", userHandler.Create)
 
 	//tenant
@@ -51,5 +56,9 @@ func SetupRoutes(c *fiber.App,
 	subscriptionPrivate.Post("/create", subscriptionPlanHandler.Create, middleware.RequireRole("super-admin"))
 	subscriptionPrivate.Post("/update/:id", subscriptionPlanHandler.Update, middleware.RequireRole("super-admin"))
 	subscriptionPrivate.Delete("/delete/:id", subscriptionPlanHandler.Delete, middleware.RequireRole("super-admin"))
+
+	//event
+	event.Get("/get-tags", eventHandler.GetTags, middleware.RequireRole("tenant-admin", "organizer"))
+	event.Get("/get-categories", eventHandler.GetCategories, middleware.RequireRole("tenant-admin", "organizer"))
 
 }

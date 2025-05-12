@@ -8,6 +8,7 @@ import (
 type EventCategoryRepository interface {
 	Create(eventCategory *model.EventCategory) error
 	CreateBulkWithTx(tx *gorm.DB, eventCategories *[]model.EventCategory) error
+	GetAll() ([]*model.EventCategory, error)
 }
 
 type eventCategoryRepository struct {
@@ -24,4 +25,12 @@ func (r *eventCategoryRepository) Create(eventCategory *model.EventCategory) err
 
 func (r *eventCategoryRepository) CreateBulkWithTx(tx *gorm.DB, eventCategories *[]model.EventCategory) error {
 	return r.DB.Create(eventCategories).Error
+}
+
+func (r *eventCategoryRepository) GetAll() ([]*model.EventCategory, error) {
+	var eventCategories []*model.EventCategory
+	if err := r.DB.Find(&eventCategories).Error; err != nil {
+		return nil, err
+	}
+	return eventCategories, nil
 }

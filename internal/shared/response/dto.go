@@ -14,7 +14,7 @@ type UserLog struct {
 type EventLog struct {
 	ID          string    `json:"id"`
 	TenantID    string    `json:"tenant_id"`
-	Description string    `json:"description"`
+	Description *string   `json:"description"`
 	Location    string    `json:"location"`
 	StartDate   time.Time `json:"start_date"`
 	EndDate     time.Time `json:"end_date"`

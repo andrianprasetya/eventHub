@@ -6,6 +6,7 @@ import (
 	_ "github.com/andrianprasetya/eventHub/database/dialect/postgres"
 	logRepository "github.com/andrianprasetya/eventHub/internal/audit_security_log/repository"
 	eventRepository "github.com/andrianprasetya/eventHub/internal/event/repository"
+	eventUsecase "github.com/andrianprasetya/eventHub/internal/event/usecase"
 	_ "github.com/andrianprasetya/eventHub/internal/shared/config"
 	repositoryShared "github.com/andrianprasetya/eventHub/internal/shared/repository"
 	tenantRepository "github.com/andrianprasetya/eventHub/internal/tenant/repository"
@@ -42,6 +43,7 @@ func main() {
 	roleRepo := userRepository.NewRoleRepository(db)
 	eventCategoryRepo := eventRepository.NewEventCategoryRepository(db)
 	eventTagRepo := eventRepository.NewEventTagRepository(db)
+	eventRepo := eventRepository.NewEventRepository(db)
 	loginHistoryRepo := logRepository.NewLoginHistoryRepository(db)
 	logActivityRepo := logRepository.NewLogActivityRepository(db)
 
@@ -57,8 +59,9 @@ func main() {
 		eventCategoryRepo)
 	subscriptionPlanUC := tenantUsecase.NewSubscriptionPlanUsecase(subscriptionPlanRepo)
 	userUC := userUsecase.NewUserUsecase(txManager, userRepo, roleRepo, loginHistoryRepo, logActivityRepo)
+	eventUC := eventUsecase.NewEventUsecase(txManager, eventRepo, eventTagRepo, eventCategoryRepo, logActivityRepo)
 
-	routes.SetupRoutes(app, redis, tenantUC, subscriptionPlanUC, userUC)
+	routes.SetupRoutes(app, redis, tenantUC, subscriptionPlanUC, userUC, eventUC)
 
 	log.Fatal(app.Listen(fmt.Sprintf("%s:%s", *host, *port)))
 }

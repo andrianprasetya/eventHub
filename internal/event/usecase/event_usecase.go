@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	logRepository "github.com/andrianprasetya/eventHub/internal/audit_security_log/repository"
+	"github.com/andrianprasetya/eventHub/internal/event/dto/mapper"
 	"github.com/andrianprasetya/eventHub/internal/event/dto/request"
+	"github.com/andrianprasetya/eventHub/internal/event/dto/response"
 	"github.com/andrianprasetya/eventHub/internal/event/model"
 	"github.com/andrianprasetya/eventHub/internal/event/repository"
 	"github.com/andrianprasetya/eventHub/internal/shared/helper"
 	"github.com/andrianprasetya/eventHub/internal/shared/middleware"
+	repositoryShared "github.com/andrianprasetya/eventHub/internal/shared/repository"
 	responseDTO "github.com/andrianprasetya/eventHub/internal/shared/response"
 	"github.com/andrianprasetya/eventHub/internal/shared/utils"
 	log "github.com/sirupsen/logrus"
@@ -16,18 +19,35 @@ import (
 
 type EventUsecase interface {
 	Create(req request.CreateEventRequest, auth middleware.AuthUser, method string) error
+	GetTags() ([]*response.EventTagListItemResponse, error)
+	GetCategories() ([]*response.EventCategoryListItemResponse, error)
 }
 
 type eventUsecase struct {
-	eventRepo    repository.EventRepository
-	activityRepo logRepository.LogActivityRepository
+	txManager         repositoryShared.TxManager
+	eventRepo         repository.EventRepository
+	eventTagRepo      repository.EventTagRepository
+	eventCategoryRepo repository.EventCategoryRepository
+	activityRepo      logRepository.LogActivityRepository
 }
 
-func NewEventRepository(eventRepo repository.EventRepository, activityRepo logRepository.LogActivityRepository) EventUsecase {
-	return &eventUsecase{eventRepo: eventRepo}
+func NewEventUsecase(
+	txManager repositoryShared.TxManager,
+	eventRepo repository.EventRepository,
+	eventTagRepo repository.EventTagRepository,
+	eventCategoryRepo repository.EventCategoryRepository,
+	activityRepo logRepository.LogActivityRepository,
+) EventUsecase {
+	return &eventUsecase{
+		txManager:         txManager,
+		eventRepo:         eventRepo,
+		eventTagRepo:      eventTagRepo,
+		eventCategoryRepo: eventCategoryRepo,
+		activityRepo:      activityRepo}
 }
 
-func (u eventUsecase) Create(req request.CreateEventRequest, auth middleware.AuthUser, method string) error {
+func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.AuthUser, method string) error {
+	tx := u.txManager.Begin()
 	event := &model.Event{
 		ID:          utils.GenerateID(),
 		TenantID:    auth.Tenant.ID,
@@ -38,7 +58,7 @@ func (u eventUsecase) Create(req request.CreateEventRequest, auth middleware.Aut
 		Status:      "published",
 	}
 
-	if errCreateEvent := u.eventRepo.Create(event); errCreateEvent != nil {
+	if errCreateEvent := u.eventRepo.Create(tx, event); errCreateEvent != nil {
 		log.WithFields(log.Fields{
 			"error": errCreateEvent,
 		}).Error("failed to create event")
@@ -59,7 +79,18 @@ func (u eventUsecase) Create(req request.CreateEventRequest, auth middleware.Aut
 		return fmt.Errorf("error marshaling user")
 	}
 
-	helper.LogActivity(u.activityRepo, auth.ID, method, string(userJSON), "event", event.ID)
+	helper.LogActivity(tx, u.activityRepo, auth.ID, method, string(userJSON), "event", event.ID)
 
 	return nil
+}
+
+func (u *eventUsecase) GetTags() ([]*response.EventTagListItemResponse, error) {
+	eventTags, err := u.eventTagRepo.GetAll()
+
+	return mapper.FromEventTagToList(eventTags), err
+}
+func (u *eventUsecase) GetCategories() ([]*response.EventCategoryListItemResponse, error) {
+	eventCategories, err := u.eventCategoryRepo.GetAll()
+
+	return mapper.FromEventCategoryToList(eventCategories), err
 }
