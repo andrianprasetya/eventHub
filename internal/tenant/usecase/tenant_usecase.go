@@ -2,7 +2,9 @@ package usecase
 
 import (
 	"fmt"
+	eventRepository "github.com/andrianprasetya/eventHub/internal/event/repository"
 	repositoryShared "github.com/andrianprasetya/eventHub/internal/shared/repository"
+	"github.com/andrianprasetya/eventHub/internal/shared/service"
 	"github.com/andrianprasetya/eventHub/internal/shared/utils"
 	"github.com/andrianprasetya/eventHub/internal/tenant/dto/request"
 	modelTenant "github.com/andrianprasetya/eventHub/internal/tenant/model"
@@ -27,6 +29,8 @@ type tenantUsecase struct {
 	subscriptionPlanRepo    repository.SubscriptionPlanRepository
 	userRepo                userRepository.UserRepository
 	roleRepo                userRepository.RoleRepository
+	eventTagRepo            eventRepository.EventTagRepository
+	eventCategoryRepo       eventRepository.EventCategoryRepository
 }
 
 func NewTenantUsecase(
@@ -36,7 +40,10 @@ func NewTenantUsecase(
 	subscriptionRepo repository.SubscriptionRepository,
 	subscriptionPlanRepo repository.SubscriptionPlanRepository,
 	userRepo userRepository.UserRepository,
-	roleRepo userRepository.RoleRepository) TenantUsecase {
+	roleRepo userRepository.RoleRepository,
+	eventTagRepo eventRepository.EventTagRepository,
+	eventCategoryRepo eventRepository.EventCategoryRepository,
+) TenantUsecase {
 	return &tenantUsecase{
 		txManager:               txManager,
 		tenantRepo:              tenantRepo,
@@ -45,6 +52,8 @@ func NewTenantUsecase(
 		subscriptionPlanRepo:    subscriptionPlanRepo,
 		userRepo:                userRepo,
 		roleRepo:                roleRepo,
+		eventTagRepo:            eventTagRepo,
+		eventCategoryRepo:       eventCategoryRepo,
 	}
 }
 
@@ -129,12 +138,35 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 		return fmt.Errorf("something went wrong")
 	}
 
+	eventCategories := service.BulkCategories(tenant.ID)
+	eventTags := service.BulkTags(tenant.ID)
+
+	if err := u.eventCategoryRepo.CreateBulkWithTx(tx, eventCategories); err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("failed to insert event tags")
+		return fmt.Errorf("something went wrong")
+	}
+
+	if err := u.eventTagRepo.CreateBulkWithTx(tx, eventTags); err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("failed to insert event tags")
+		return fmt.Errorf("something went wrong")
+	}
+
+	var endDate *time.Time
+	if subscriptionPlan.DurationDay != -1 {
+		d := time.Now().AddDate(0, 0, subscriptionPlan.DurationDay)
+		endDate = &d
+	}
+
 	subscription := &modelTenant.Subscription{
 		ID:        utils.GenerateID(),
 		TenantID:  tenant.ID,
 		PlanID:    request.SubscriptionPlanID,
 		StartDate: time.Now(),
-		EndDate:   time.Now().AddDate(0, 0, subscriptionPlan.DurationDay),
+		EndDate:   endDate,
 		IsActive:  1,
 	}
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	_ "github.com/andrianprasetya/eventHub/database/dialect/postgres"
 	logRepository "github.com/andrianprasetya/eventHub/internal/audit_security_log/repository"
+	eventRepository "github.com/andrianprasetya/eventHub/internal/event/repository"
 	_ "github.com/andrianprasetya/eventHub/internal/shared/config"
 	repositoryShared "github.com/andrianprasetya/eventHub/internal/shared/repository"
 	tenantRepository "github.com/andrianprasetya/eventHub/internal/tenant/repository"
@@ -39,11 +40,21 @@ func main() {
 	subscriptionPlanRepo := tenantRepository.NewSubscriptionPlanRepository(db)
 	userRepo := userRepository.NewUserRepository(db)
 	roleRepo := userRepository.NewRoleRepository(db)
+	eventCategoryRepo := eventRepository.NewEventCategoryRepository(db)
+	eventTagRepo := eventRepository.NewEventTagRepository(db)
 	loginHistoryRepo := logRepository.NewLoginHistoryRepository(db)
 	logActivityRepo := logRepository.NewLogActivityRepository(db)
 
 	//Usecase
-	tenantUC := tenantUsecase.NewTenantUsecase(txManager, tenantRepo, tenantSettingRepo, subscriptionRepo, subscriptionPlanRepo, userRepo, roleRepo)
+	tenantUC := tenantUsecase.NewTenantUsecase(txManager,
+		tenantRepo,
+		tenantSettingRepo,
+		subscriptionRepo,
+		subscriptionPlanRepo,
+		userRepo,
+		roleRepo,
+		eventTagRepo,
+		eventCategoryRepo)
 	subscriptionPlanUC := tenantUsecase.NewSubscriptionPlanUsecase(subscriptionPlanRepo)
 	userUC := userUsecase.NewUserUsecase(txManager, userRepo, roleRepo, loginHistoryRepo, logActivityRepo)
 

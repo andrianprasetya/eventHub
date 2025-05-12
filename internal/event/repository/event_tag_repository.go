@@ -7,7 +7,7 @@ import (
 
 type EventTagRepository interface {
 	Create(eventTag *model.EventTag) error
-	CreateBulkWithTx(tx *gorm.DB, eventTags []*model.EventTag)
+	CreateBulkWithTx(tx *gorm.DB, eventTags *[]model.EventTag) error
 }
 
 type eventTagRepository struct {
@@ -22,4 +22,6 @@ func (r *eventTagRepository) Create(eventTag *model.EventTag) error {
 	return r.DB.Create(eventTag).Error
 }
 
-func (r *eve)
+func (r *eventTagRepository) CreateBulkWithTx(tx *gorm.DB, eventTags *[]model.EventTag) error {
+	return r.DB.Create(eventTags).Error
+}
