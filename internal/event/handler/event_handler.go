@@ -8,6 +8,7 @@ import (
 	"github.com/andrianprasetya/eventHub/internal/shared/validation"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
+	"strconv"
 )
 
 type EventHandler struct {
@@ -19,21 +20,26 @@ func NewEventHandler(eventUC usecase.EventUsecase) *EventHandler {
 }
 
 func (h *EventHandler) GetTags(c *fiber.Ctx) error {
-	eventTags, err := h.eventUC.GetTags()
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	pageSize, _ := strconv.Atoi(c.Query("pageSize", "10"))
+	eventTags, total, err := h.eventUC.GetTags(page, pageSize)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
 	}
 
-	return c.Status(fiber.StatusOK).JSON(response.SuccessWithDataResponse(fiber.StatusOK, "Get Event Tags successfully", eventTags))
+	return c.Status(fiber.StatusOK).JSON(response.SuccessWithPaginateDataResponse(fiber.StatusOK, "Get Event Tags successfully", eventTags, page, pageSize, total))
 }
 
 func (h *EventHandler) GetCategories(c *fiber.Ctx) error {
-	eventCategories, err := h.eventUC.GetCategories()
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	pageSize, _ := strconv.Atoi(c.Query("pageSize", "10"))
+
+	eventCategories, total, err := h.eventUC.GetCategories(page, pageSize)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
 	}
 
-	return c.Status(fiber.StatusOK).JSON(response.SuccessWithDataResponse(fiber.StatusOK, "Get Event Categories successfully", eventCategories))
+	return c.Status(fiber.StatusOK).JSON(response.SuccessWithPaginateDataResponse(fiber.StatusOK, "Get Event Categories successfully", eventCategories, page, pageSize, total))
 }
 
 func (h *EventHandler) Create(c *fiber.Ctx) error {

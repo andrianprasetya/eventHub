@@ -8,7 +8,7 @@ import (
 type EventTagRepository interface {
 	Create(eventTag *model.EventTag) error
 	CreateBulkWithTx(tx *gorm.DB, eventTags *[]model.EventTag) error
-	GetAll() ([]*model.EventTag, error)
+	GetAll(page, pageSize int) ([]*model.EventTag, int64, error)
 }
 
 type eventTagRepository struct {
@@ -27,10 +27,17 @@ func (r *eventTagRepository) CreateBulkWithTx(tx *gorm.DB, eventTags *[]model.Ev
 	return r.DB.Create(eventTags).Error
 }
 
-func (r *eventTagRepository) GetAll() ([]*model.EventTag, error) {
+func (r *eventTagRepository) GetAll(page, pageSize int) ([]*model.EventTag, int64, error) {
 	var eventTags []*model.EventTag
-	if err := r.DB.Find(&eventTags).Error; err != nil {
-		return nil, err
+	var total int64
+
+	if err := r.DB.Model(&model.EventTag{}).Count(&total).Error; err != nil {
+		return nil, 0, err
 	}
-	return eventTags, nil
+	offset := (page - 1) * pageSize
+
+	if err := r.DB.Limit(pageSize).Offset(offset).Find(&eventTags).Error; err != nil {
+		return nil, 0, err
+	}
+	return eventTags, total, nil
 }

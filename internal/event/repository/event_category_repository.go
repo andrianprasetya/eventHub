@@ -9,7 +9,7 @@ type EventCategoryRepository interface {
 	Create(eventCategory *model.EventCategory) error
 	CreateBulkWithTx(tx *gorm.DB, eventCategories *[]model.EventCategory) error
 	AddCategoryToEventWithTx(tx *gorm.DB, id string, event *model.Event) error
-	GetAll() ([]*model.EventCategory, error)
+	GetAll(page, pageSize int) ([]*model.EventCategory, int64, error)
 }
 
 type eventCategoryRepository struct {
@@ -28,12 +28,18 @@ func (r *eventCategoryRepository) CreateBulkWithTx(tx *gorm.DB, eventCategories 
 	return r.DB.Create(eventCategories).Error
 }
 
-func (r *eventCategoryRepository) GetAll() ([]*model.EventCategory, error) {
+func (r *eventCategoryRepository) GetAll(page, pageSize int) ([]*model.EventCategory, int64, error) {
 	var eventCategories []*model.EventCategory
-	if err := r.DB.Find(&eventCategories).Error; err != nil {
-		return nil, err
+	var total int64
+
+	if err := r.DB.Model(&model.EventCategory{}).Count(&total).Error; err != nil {
+		return nil, 0, err
 	}
-	return eventCategories, nil
+	offset := (page - 1) * pageSize
+	if err := r.DB.Limit(pageSize).Offset(offset).Find(&eventCategories).Error; err != nil {
+		return nil, 0, err
+	}
+	return eventCategories, total, nil
 }
 
 func (r *eventCategoryRepository) AddCategoryToEventWithTx(tx *gorm.DB, id string, event *model.Event) error {
