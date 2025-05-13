@@ -1,10 +1,10 @@
 package response
 
 type APIResponse[T any] struct {
-	Meta     Meta     `json:"meta"`
-	Data     Data[T]  `json:"data,omitempty,dive"`
-	Errors   any      `json:"errors,omitempty"`
-	PageInfo PageInfo `json:"page_info,omitempty"`
+	Meta     *Meta     `json:"meta"`
+	Data     *Data[T]  `json:"data,omitempty,dive"`
+	Errors   any       `json:"errors,omitempty"`
+	PageInfo *PageInfo `json:"page_info,omitempty"`
 }
 
 type Meta struct {
@@ -26,39 +26,41 @@ type PageInfo struct {
 
 func SuccessResponse(code int, msg string) *APIResponse[struct{}] {
 	return &APIResponse[struct{}]{
-		Meta: Meta{
+		Meta: &Meta{
 			Code:    code,
 			Message: msg,
 		},
+		PageInfo: nil,
 	}
 }
 
 func SuccessWithDataResponse[T any](code int, msg string, data T) *APIResponse[T] {
 	return &APIResponse[T]{
-		Meta: Meta{
+		Meta: &Meta{
 			Code:    code,
 			Message: msg,
 		},
-		Data: Data[T]{
+		Data: &Data[T]{
 			Item: data,
 		},
+		PageInfo: nil,
 	}
 }
 
 func SuccessWithPaginateDataResponse[T any](code int, msg string, data []T, page, pageSize int, totalItems int64) *APIResponse[T] {
 	totalPages := int((totalItems + int64(pageSize) - 1) / int64(pageSize))
 	return &APIResponse[T]{
-		Meta: Meta{
+		Meta: &Meta{
 			Code:    code,
 			Message: msg,
 		},
-		PageInfo: PageInfo{
+		PageInfo: &PageInfo{
 			TotalPages: totalPages,
 			TotalItems: totalItems,
 			Page:       page,
 			PageSize:   pageSize,
 		},
-		Data: Data[T]{
+		Data: &Data[T]{
 			Items: data,
 		},
 	}
@@ -66,20 +68,22 @@ func SuccessWithPaginateDataResponse[T any](code int, msg string, data []T, page
 
 func ValidationResponse(code int, errs any) *APIResponse[struct{}] {
 	return &APIResponse[struct{}]{
-		Meta: Meta{
+		Meta: &Meta{
 			Code:    code,
 			Message: "Invalid request",
 		},
-		Errors: errs,
+		Errors:   errs,
+		PageInfo: nil,
 	}
 }
 
 func ErrorResponse(code int, msg string, errs any) *APIResponse[struct{}] {
 	return &APIResponse[struct{}]{
-		Meta: Meta{
+		Meta: &Meta{
 			Code:    code,
 			Message: msg,
 		},
-		Errors: errs,
+		Errors:   errs,
+		PageInfo: nil,
 	}
 }

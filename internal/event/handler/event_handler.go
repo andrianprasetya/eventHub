@@ -21,19 +21,19 @@ func NewEventHandler(eventUC usecase.EventUsecase) *EventHandler {
 func (h *EventHandler) GetTags(c *fiber.Ctx) error {
 	eventTags, err := h.eventUC.GetTags()
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(err.Error(), err))
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
 	}
 
-	return c.Status(fiber.StatusOK).JSON(response.SuccessWithDataResponse("Get Event Tags successfully", eventTags))
+	return c.Status(fiber.StatusOK).JSON(response.SuccessWithDataResponse(fiber.StatusOK, "Get Event Tags successfully", eventTags))
 }
 
 func (h *EventHandler) GetCategories(c *fiber.Ctx) error {
 	eventCategories, err := h.eventUC.GetCategories()
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(err.Error(), err))
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
 	}
 
-	return c.Status(fiber.StatusOK).JSON(response.SuccessWithDataResponse("Get Event Categories successfully", eventCategories))
+	return c.Status(fiber.StatusOK).JSON(response.SuccessWithDataResponse(fiber.StatusOK, "Get Event Categories successfully", eventCategories))
 }
 
 func (h *EventHandler) Create(c *fiber.Ctx) error {
@@ -42,7 +42,7 @@ func (h *EventHandler) Create(c *fiber.Ctx) error {
 	var url = c.OriginalURL()
 
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusUnprocessableEntity).JSON(response.ErrorResponse(err.Error(), nil))
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(response.ValidationResponse(fiber.StatusUnprocessableEntity, err))
 	}
 
 	userAuth := c.Locals("user").(middleware.AuthUser)
@@ -50,11 +50,11 @@ func (h *EventHandler) Create(c *fiber.Ctx) error {
 	if errValidation := validation.NewValidator().Validate(&req); errValidation != nil {
 		errs := errValidation.(validator.ValidationErrors)
 		errorMessages := validation.MapValidationErrorsToJSONTags(req, errs)
-		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationResponse(errorMessages))
+		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationResponse(fiber.StatusBadRequest, errorMessages))
 	}
 	event, err := h.eventUC.Create(req, userAuth, url)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(err.Error(), err))
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
 	}
-	return c.Status(fiber.StatusOK).JSON(response.SuccessWithDataResponse("Create Event successfully", event))
+	return c.Status(fiber.StatusOK).JSON(response.SuccessWithDataResponse(fiber.StatusOK, "Create Event successfully", event))
 }

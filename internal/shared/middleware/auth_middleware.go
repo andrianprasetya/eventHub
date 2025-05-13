@@ -39,7 +39,7 @@ func AuthMiddleware(redis redisser.RedisClient) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		authHeader := c.Get("Authorization")
 		if !strings.HasPrefix(authHeader, "Bearer ") {
-			return c.Status(fiber.StatusUnauthorized).JSON(response.ErrorResponse("Missing or invalid token", nil))
+			return c.Status(fiber.StatusUnauthorized).JSON(response.ErrorResponse(fiber.StatusUnauthorized, "Missing or invalid token", nil))
 		}
 
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
@@ -48,12 +48,12 @@ func AuthMiddleware(redis redisser.RedisClient) fiber.Handler {
 		ctx := context.Background()
 		data, err := redis.Get(ctx, "user:jwt:"+tokenString)
 		if err != nil {
-			return c.Status(fiber.StatusUnauthorized).JSON(response.ErrorResponse("Token expired or invalid", err))
+			return c.Status(fiber.StatusUnauthorized).JSON(response.ErrorResponse(fiber.StatusUnauthorized, "Token expired or invalid", err))
 		}
 
 		var authUser AuthUser
 		if err := json.Unmarshal([]byte(data), &authUser); err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse("Something went wrong", err))
+			return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, "Something went wrong", err))
 		}
 		// save payload ke context
 		c.Locals("user", authUser)
@@ -67,7 +67,7 @@ func RequireRole(roles ...string) fiber.Handler {
 		authUser := c.Locals("user") // assuming you already store the user info in Locals after auth
 
 		if authUser == nil {
-			return c.Status(fiber.StatusUnauthorized).JSON(response.ErrorResponse("Unauthorized", nil))
+			return c.Status(fiber.StatusUnauthorized).JSON(response.ErrorResponse(fiber.StatusUnauthorized, "Unauthorized", nil))
 		}
 
 		// assume user struct has a Role field like: authUser.(User).Role
@@ -79,6 +79,6 @@ func RequireRole(roles ...string) fiber.Handler {
 			}
 		}
 
-		return c.Status(fiber.StatusForbidden).JSON(response.ErrorResponse("Forbidden: insufficient permissions", nil))
+		return c.Status(fiber.StatusForbidden).JSON(response.ErrorResponse(fiber.StatusForbidden, "Forbidden: insufficient permissions", nil))
 	}
 }

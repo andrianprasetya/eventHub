@@ -22,13 +22,13 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	var req request.LoginRequest
 
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusUnprocessableEntity).JSON(response.ErrorResponse(err.Error(), nil))
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(response.ValidationResponse(fiber.StatusUnprocessableEntity, err))
 	}
 
 	if errValidation := validation.NewValidator().Validate(&req); errValidation != nil {
 		errs := errValidation.(validator.ValidationErrors)
 		errorMessages := validation.MapValidationErrorsToJSONTags(req, errs)
-		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationResponse(errorMessages))
+		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationResponse(fiber.StatusBadRequest, errorMessages))
 	}
 
 	ctx := context.Background()
@@ -36,9 +36,9 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 
 	token, errLogin := h.userUC.Login(ctx, req, ip)
 	if errLogin != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(errLogin.Error(), errLogin))
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, errLogin.Error(), errLogin))
 	}
 
-	return c.Status(fiber.StatusOK).JSON(response.SuccessWithDataResponse("Get token successfully", token))
+	return c.Status(fiber.StatusOK).JSON(response.SuccessWithDataResponse(fiber.StatusOK, "Get token successfully", token))
 
 }

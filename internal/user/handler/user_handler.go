@@ -22,7 +22,7 @@ func (h *UserHandler) Create(c *fiber.Ctx) error {
 	var req request.CreateUserRequest
 	var url = c.OriginalURL()
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusUnprocessableEntity).JSON(response.ErrorResponse(err.Error(), nil))
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(response.ValidationResponse(fiber.StatusUnprocessableEntity, err))
 	}
 
 	userAuth := c.Locals("user").(middleware.AuthUser)
@@ -30,11 +30,11 @@ func (h *UserHandler) Create(c *fiber.Ctx) error {
 	if errValidation := validation.NewValidator().Validate(&req); errValidation != nil {
 		errs := errValidation.(validator.ValidationErrors)
 		errorMessages := validation.MapValidationErrorsToJSONTags(req, errs)
-		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationResponse(errorMessages))
+		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationResponse(fiber.StatusBadRequest, errorMessages))
 	}
 
 	if errRegisterTenant := h.userUC.Create(req, userAuth, url); errRegisterTenant != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(errRegisterTenant.Error(), errRegisterTenant))
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, errRegisterTenant.Error(), errRegisterTenant))
 	}
-	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse("User registered successfully"))
+	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(fiber.StatusOK, "User registered successfully"))
 }
