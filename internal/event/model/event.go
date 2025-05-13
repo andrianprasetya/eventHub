@@ -1,6 +1,7 @@
 package model
 
 import (
+	"github.com/andrianprasetya/eventHub/internal/shared/utils"
 	modelTenant "github.com/andrianprasetya/eventHub/internal/tenant/model"
 	"time"
 )
@@ -10,7 +11,7 @@ type Event struct {
 	TenantID    string             `gorm:"type:varchar(50);not null;index"`
 	Title       string             `gorm:"type:varchar(100);not null;index"`
 	CategoryID  string             `gorm:"type:varchar(50);not null;index"`
-	Tags        []string           `gorm:"type:jsonb;not null"`
+	Tags        *utils.StringArray `gorm:"type:text[]"`
 	Description *string            `gorm:"type:text"`
 	Location    string             `gorm:"type:varchar(255);not null"`
 	StartDate   time.Time          `gorm:"type:date;not null"`

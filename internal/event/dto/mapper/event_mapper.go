@@ -5,6 +5,23 @@ import (
 	"github.com/andrianprasetya/eventHub/internal/event/model"
 )
 
+func FromUserModel(event *model.Event) *response.EventResponse {
+	return &response.EventResponse{
+		ID:    event.ID,
+		Title: event.Title,
+		Category: response.Category{
+			ID:   event.Category.ID,
+			Name: event.Category.Name,
+		},
+		Tags:        *event.Tags,
+		Description: *event.Description,
+		Location:    event.Location,
+		StartDate:   event.StartDate,
+		EndDate:     event.EndDate,
+		Status:      event.Status,
+	}
+}
+
 func FromEventTagToListItem(eventTag *model.EventTag) *response.EventTagListItemResponse {
 	return &response.EventTagListItemResponse{
 		Name: eventTag.Name,

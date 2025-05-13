@@ -18,7 +18,7 @@ import (
 )
 
 type EventUsecase interface {
-	Create(req request.CreateEventRequest, auth middleware.AuthUser, method string) error
+	Create(req request.CreateEventRequest, auth middleware.AuthUser, url string) (*response.EventResponse, error)
 	GetTags() ([]*response.EventTagListItemResponse, error)
 	GetCategories() ([]*response.EventCategoryListItemResponse, error)
 }
@@ -46,23 +46,48 @@ func NewEventUsecase(
 		activityRepo:      activityRepo}
 }
 
-func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.AuthUser, method string) error {
+func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.AuthUser, url string) (*response.EventResponse, error) {
 	tx := u.txManager.Begin()
+
+	var err error
+
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			log.WithFields(log.Fields{
+				"error": r,
+			}).Error("Failed to create event  (panic recovered)")
+			err = fmt.Errorf("something went wrong")
+		} else if err != nil {
+			tx.Rollback()
+		}
+	}()
+
 	event := &model.Event{
 		ID:          utils.GenerateID(),
+		Title:       req.Title,
 		TenantID:    auth.Tenant.ID,
+		CategoryID:  req.CategoryID,
+		Tags:        req.Tags,
 		Description: req.Description,
 		Location:    req.Location,
 		StartDate:   req.StartDate,
 		EndDate:     req.EndDate,
-		Status:      "published",
+		Status:      "draft",
 	}
 
-	if errCreateEvent := u.eventRepo.Create(tx, event); errCreateEvent != nil {
+	if err = u.eventRepo.Create(tx, event); err != nil {
 		log.WithFields(log.Fields{
-			"error": errCreateEvent,
+			"error": err,
 		}).Error("failed to create event")
-		return fmt.Errorf("something Went wrong")
+		return &response.EventResponse{}, err
+	}
+
+	if err = u.eventCategoryRepo.AddCategoryToEventWithTx(tx, event.ID, event); err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("failed to add category to event")
+		return &response.EventResponse{}, err
 	}
 
 	userLog := responseDTO.EventLog{
@@ -76,12 +101,14 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 
 	userJSON, errMarshal := json.Marshal(userLog)
 	if errMarshal != nil {
-		return fmt.Errorf("error marshaling user")
+		return &response.EventResponse{}, err
+	}
+	err = tx.Commit().Error
+	if err == nil {
+		helper.LogActivity(u.activityRepo, auth.ID, url, "Create Event", string(userJSON), "event", event.ID)
 	}
 
-	helper.LogActivity(tx, u.activityRepo, auth.ID, method, string(userJSON), "event", event.ID)
-
-	return nil
+	return mapper.FromUserModel(event), err
 }
 
 func (u *eventUsecase) GetTags() ([]*response.EventTagListItemResponse, error) {

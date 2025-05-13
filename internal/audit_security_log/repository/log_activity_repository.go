@@ -6,7 +6,7 @@ import (
 )
 
 type LogActivityRepository interface {
-	Create(tx *gorm.DB, history *model.ActivityLog) error
+	Create(history *model.ActivityLog) error
 }
 
 type logActivityRepository struct {
@@ -17,6 +17,6 @@ func NewLogActivityRepository(db *gorm.DB) LogActivityRepository {
 	return &logActivityRepository{DB: db}
 }
 
-func (r logActivityRepository) Create(tx *gorm.DB, history *model.ActivityLog) error {
-	return tx.Create(history).Error
+func (r *logActivityRepository) Create(history *model.ActivityLog) error {
+	return r.DB.Create(history).Error
 }

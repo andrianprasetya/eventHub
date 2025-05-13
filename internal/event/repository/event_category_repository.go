@@ -8,6 +8,7 @@ import (
 type EventCategoryRepository interface {
 	Create(eventCategory *model.EventCategory) error
 	CreateBulkWithTx(tx *gorm.DB, eventCategories *[]model.EventCategory) error
+	AddCategoryToEventWithTx(tx *gorm.DB, id string, event *model.Event) error
 	GetAll() ([]*model.EventCategory, error)
 }
 
@@ -33,4 +34,8 @@ func (r *eventCategoryRepository) GetAll() ([]*model.EventCategory, error) {
 		return nil, err
 	}
 	return eventCategories, nil
+}
+
+func (r *eventCategoryRepository) AddCategoryToEventWithTx(tx *gorm.DB, id string, event *model.Event) error {
+	return tx.Preload("Category").First(event, "id = ?", id).Error
 }

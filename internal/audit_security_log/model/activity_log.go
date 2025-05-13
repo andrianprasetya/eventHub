@@ -8,7 +8,8 @@ import (
 type ActivityLog struct {
 	ID         string     `gorm:"type:varchar(50);primary_key:true"`
 	UserID     string     `gorm:"type:varchar(50);not null;index"`
-	Action     string     `gorm:"type:varchar(100);not null"`
+	URL        string     `gorm:"type:varchar(100);not null"`
+	Action     string     `gorm:"type:varchar(50);not null"`
 	ObjectData string     `gorm:"type:text;not null"`
 	ObjectType string     `gorm:"type:varchar(50);not null"`
 	ObjectID   string     `gorm:"type:varchar(50);not null;index"`

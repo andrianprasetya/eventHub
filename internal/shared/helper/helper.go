@@ -5,7 +5,6 @@ import (
 	"github.com/andrianprasetya/eventHub/internal/audit_security_log/repository"
 	"github.com/andrianprasetya/eventHub/internal/shared/utils"
 	logging "github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 	"time"
 )
 
@@ -34,10 +33,11 @@ func LogLoginHistory(repo repository.LoginHistoryRepository, userId, ip string) 
 	}(log)
 }
 
-func LogActivity(tx *gorm.DB, repo repository.LogActivityRepository, userId, action, objectData, objectType, objectId string) {
+func LogActivity(repo repository.LogActivityRepository, userId, url, action, objectData, objectType, objectId string) {
 	activity := &model.ActivityLog{
 		ID:         utils.GenerateID(),
 		UserID:     userId,
+		URL:        url,
 		Action:     action,
 		ObjectData: objectData,
 		ObjectType: objectType,
@@ -52,7 +52,7 @@ func LogActivity(tx *gorm.DB, repo repository.LogActivityRepository, userId, act
 				}).Error("panic occurred in LogLoginHistory goroutine")
 			}
 		}()
-		if err := repo.Create(tx, activity); err != nil {
+		if err := repo.Create(activity); err != nil {
 			logging.WithFields(logging.Fields{
 				"error": err,
 			}).Error("failed to Log Activity")

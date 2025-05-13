@@ -22,7 +22,7 @@ import (
 
 type UserUsecase interface {
 	Login(ctx context.Context, req request.LoginRequest, ip string) (*response.LoginResponse, error)
-	Create(req request.CreateUserRequest, auth middleware.AuthUser, method string) error
+	Create(req request.CreateUserRequest, auth middleware.AuthUser, url string) error
 }
 
 type userUsecase struct {
@@ -117,7 +117,7 @@ func (u *userUsecase) Login(ctx context.Context, req request.LoginRequest, ip st
 
 }
 
-func (u *userUsecase) Create(req request.CreateUserRequest, auth middleware.AuthUser, method string) error {
+func (u *userUsecase) Create(req request.CreateUserRequest, auth middleware.AuthUser, url string) error {
 	tx := u.txManager.Begin()
 
 	var err error
@@ -178,7 +178,11 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth middleware.Auth
 		return fmt.Errorf("error marshaling user")
 	}
 
-	helper.LogActivity(tx, u.activityRepo, auth.ID, method, string(userJSON), "user", user.ID)
 	err = tx.Commit().Error
+	
+	if err == nil {
+		helper.LogActivity(u.activityRepo, auth.ID, url, "Create User", string(userJSON), "user", user.ID)
+	}
+
 	return err
 }

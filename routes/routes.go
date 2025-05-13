@@ -60,5 +60,6 @@ func SetupRoutes(c *fiber.App,
 	//event
 	event.Get("/get-tags", eventHandler.GetTags, middleware.RequireRole("tenant-admin", "organizer"))
 	event.Get("/get-categories", eventHandler.GetCategories, middleware.RequireRole("tenant-admin", "organizer"))
+	event.Post("/create", eventHandler.Create, middleware.RequireRole("tenant-admin", "organizer"))
 
 }

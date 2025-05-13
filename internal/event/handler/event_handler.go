@@ -39,7 +39,7 @@ func (h *EventHandler) GetCategories(c *fiber.Ctx) error {
 func (h *EventHandler) Create(c *fiber.Ctx) error {
 	var req request.CreateEventRequest
 
-	var method = c.Method()
+	var url = c.OriginalURL()
 
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusUnprocessableEntity).JSON(response.ErrorResponse(err.Error(), nil))
@@ -52,9 +52,9 @@ func (h *EventHandler) Create(c *fiber.Ctx) error {
 		errorMessages := validation.MapValidationErrorsToJSONTags(req, errs)
 		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationResponse(errorMessages))
 	}
-
-	if err := h.eventUC.Create(req, userAuth, method); err != nil {
+	event, err := h.eventUC.Create(req, userAuth, url)
+	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(err.Error(), err))
 	}
-	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse("Create Event successfully"))
+	return c.Status(fiber.StatusOK).JSON(response.SuccessWithDataResponse("Create Event successfully", event))
 }

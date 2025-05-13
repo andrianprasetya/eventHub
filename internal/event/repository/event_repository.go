@@ -18,5 +18,5 @@ func NewEventRepository(db *gorm.DB) EventRepository {
 }
 
 func (r eventRepository) Create(tx *gorm.DB, event *model.Event) error {
-	return r.DB.Create(event).Error
+	return tx.Create(event).Error
 }

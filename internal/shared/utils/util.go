@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -34,4 +35,38 @@ func ToStringJSON(v string) (map[string]interface{}, error) {
 	var data map[string]interface{}
 	err := json.Unmarshal([]byte(v), &data)
 	return data, err
+}
+
+type StringArray []string
+
+func (s *StringArray) Scan(src interface{}) error {
+	switch src := src.(type) {
+	case []byte:
+		// Parse PostgreSQL array string ke []string
+		str := string(src)
+		str = strings.Trim(str, "{}")
+		if str == "" {
+			*s = []string{}
+			return nil
+		}
+		*s = strings.Split(str, ",")
+		return nil
+	case string:
+		str := strings.Trim(src, "{}")
+		if str == "" {
+			*s = []string{}
+			return nil
+		}
+		*s = strings.Split(str, ",")
+		return nil
+	default:
+		return fmt.Errorf("unsupported type: %T", src)
+	}
+}
+
+func (s StringArray) Value() (driver.Value, error) {
+	if s == nil {
+		return "{}", nil
+	}
+	return "{" + strings.Join(s, ",") + "}", nil
 }
