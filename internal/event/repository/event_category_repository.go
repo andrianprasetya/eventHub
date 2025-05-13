@@ -37,5 +37,5 @@ func (r *eventCategoryRepository) GetAll() ([]*model.EventCategory, error) {
 }
 
 func (r *eventCategoryRepository) AddCategoryToEventWithTx(tx *gorm.DB, id string, event *model.Event) error {
-	return tx.Preload("Category").First(event, "id = ?", id).Error
+	return r.DB.Preload("Category").First(event, "id = ?", id).Error
 }

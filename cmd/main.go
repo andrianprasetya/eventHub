@@ -11,6 +11,7 @@ import (
 	repositoryShared "github.com/andrianprasetya/eventHub/internal/shared/repository"
 	tenantRepository "github.com/andrianprasetya/eventHub/internal/tenant/repository"
 	tenantUsecase "github.com/andrianprasetya/eventHub/internal/tenant/usecase"
+	ticketRepository "github.com/andrianprasetya/eventHub/internal/ticket/repository"
 	userRepository "github.com/andrianprasetya/eventHub/internal/user/repository"
 	userUsecase "github.com/andrianprasetya/eventHub/internal/user/usecase"
 	"github.com/andrianprasetya/eventHub/routes"
@@ -44,6 +45,9 @@ func main() {
 	eventCategoryRepo := eventRepository.NewEventCategoryRepository(db)
 	eventTagRepo := eventRepository.NewEventTagRepository(db)
 	eventRepo := eventRepository.NewEventRepository(db)
+	eventSessionRepo := eventRepository.NewEventSessionRepository(db)
+	ticketRepo := ticketRepository.NewTicketRepository(db)
+	discountRepo := ticketRepository.NewDiscountRepository(db)
 	loginHistoryRepo := logRepository.NewLoginHistoryRepository(db)
 	logActivityRepo := logRepository.NewLogActivityRepository(db)
 
@@ -59,7 +63,15 @@ func main() {
 		eventCategoryRepo)
 	subscriptionPlanUC := tenantUsecase.NewSubscriptionPlanUsecase(subscriptionPlanRepo)
 	userUC := userUsecase.NewUserUsecase(txManager, userRepo, roleRepo, loginHistoryRepo, logActivityRepo)
-	eventUC := eventUsecase.NewEventUsecase(txManager, eventRepo, eventTagRepo, eventCategoryRepo, logActivityRepo)
+	eventUC := eventUsecase.NewEventUsecase(
+		txManager,
+		eventRepo,
+		eventTagRepo,
+		eventCategoryRepo,
+		eventSessionRepo,
+		ticketRepo,
+		discountRepo,
+		logActivityRepo)
 
 	routes.SetupRoutes(app, redis, tenantUC, subscriptionPlanUC, userUC, eventUC)
 

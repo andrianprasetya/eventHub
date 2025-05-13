@@ -14,6 +14,8 @@ import (
 	repositoryShared "github.com/andrianprasetya/eventHub/internal/shared/repository"
 	responseDTO "github.com/andrianprasetya/eventHub/internal/shared/response"
 	"github.com/andrianprasetya/eventHub/internal/shared/utils"
+	modelTicket "github.com/andrianprasetya/eventHub/internal/ticket/model"
+	repositoryTicket "github.com/andrianprasetya/eventHub/internal/ticket/repository"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -28,6 +30,9 @@ type eventUsecase struct {
 	eventRepo         repository.EventRepository
 	eventTagRepo      repository.EventTagRepository
 	eventCategoryRepo repository.EventCategoryRepository
+	eventSessionRepo  repository.EventSessionRepository
+	ticketRepo        repositoryTicket.TicketRepository
+	discountRepo      repositoryTicket.DiscountRepository
 	activityRepo      logRepository.LogActivityRepository
 }
 
@@ -36,6 +41,9 @@ func NewEventUsecase(
 	eventRepo repository.EventRepository,
 	eventTagRepo repository.EventTagRepository,
 	eventCategoryRepo repository.EventCategoryRepository,
+	eventSessionRepo repository.EventSessionRepository,
+	ticketRepo repositoryTicket.TicketRepository,
+	discountRepo repositoryTicket.DiscountRepository,
 	activityRepo logRepository.LogActivityRepository,
 ) EventUsecase {
 	return &eventUsecase{
@@ -43,6 +51,9 @@ func NewEventUsecase(
 		eventRepo:         eventRepo,
 		eventTagRepo:      eventTagRepo,
 		eventCategoryRepo: eventCategoryRepo,
+		eventSessionRepo:  eventSessionRepo,
+		ticketRepo:        ticketRepo,
+		discountRepo:      discountRepo,
 		activityRepo:      activityRepo}
 }
 
@@ -73,7 +84,7 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 		Location:    req.Location,
 		StartDate:   req.StartDate,
 		EndDate:     req.EndDate,
-		Status:      "draft",
+		Status:      req.Status,
 	}
 
 	if err = u.eventRepo.Create(tx, event); err != nil {
@@ -87,6 +98,60 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("failed to add category to event")
+		return &response.EventResponse{}, err
+	}
+
+	var eventTickets []*modelTicket.EventTicket
+	for _, ticket := range req.Tickets {
+		eventTickets = append(eventTickets, &modelTicket.EventTicket{
+			ID:         utils.GenerateID(),
+			EventID:    event.ID,
+			TicketType: ticket.Type,
+			Price:      ticket.Price,
+			Quantity:   ticket.Quantity,
+		})
+	}
+
+	if err = u.ticketRepo.CreateBulkWithTx(tx, eventTickets); err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("failed to create ticket")
+		return &response.EventResponse{}, err
+	}
+
+	var discounts []*modelTicket.Discount
+	for _, discount := range req.Discounts {
+		discounts = append(discounts, &modelTicket.Discount{
+			ID:                 utils.GenerateID(),
+			EventID:            event.ID,
+			Code:               discount.Code,
+			DiscountPercentage: discount.DiscountPercentage,
+			StartDate:          discount.StartDate,
+			EndDate:            discount.EndDate,
+		})
+	}
+
+	if err = u.discountRepo.CreateBulkWithTx(tx, discounts); err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("failed to create discount ticket")
+		return &response.EventResponse{}, err
+	}
+
+	var sessions []*model.EventSession
+	for _, session := range req.Sessions {
+		sessions = append(sessions, &model.EventSession{
+			ID:            utils.GenerateID(),
+			Title:         session.Title,
+			StartDateTime: session.StartDateTime,
+			EndDateTime:   session.EndDateTime,
+		})
+	}
+
+	if err = u.eventSessionRepo.CreateBulkWithTx(tx, sessions); err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("failed to create event session")
 		return &response.EventResponse{}, err
 	}
 
