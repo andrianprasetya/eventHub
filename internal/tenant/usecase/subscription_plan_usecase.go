@@ -14,7 +14,7 @@ import (
 
 type SubscriptionPlanUsecase interface {
 	Create(req request.CreateSubscriptionPlanRequest, authUser middleware.AuthUser) (*response.SubscriptionPlanResponse, error)
-	GetAll() ([]*response.SubscriptionPlanListItemResponse, error)
+	GetAll(page, pageSize int) ([]*response.SubscriptionPlanListItemResponse, int64, error)
 	GetByID(id string) (*response.SubscriptionPlanResponse, error)
 	Update(id string, req request.UpdateSubscriptionPlanRequest) (*response.SubscriptionPlanResponse, error)
 	Delete(id string) error
@@ -48,10 +48,10 @@ func (u *subscriptionPlanUsecase) Create(req request.CreateSubscriptionPlanReque
 	return mapper.FromUserModel(subscriptionPlan), nil
 }
 
-func (u *subscriptionPlanUsecase) GetAll() ([]*response.SubscriptionPlanListItemResponse, error) {
-	subscriptionPlan, err := u.subscriptionPlanRepo.GetAll()
+func (u *subscriptionPlanUsecase) GetAll(page, pageSize int) ([]*response.SubscriptionPlanListItemResponse, int64, error) {
+	subscriptionPlan, total, err := u.subscriptionPlanRepo.GetAll(page, pageSize)
 
-	return mapper.FromSubscriptionPlanToList(subscriptionPlan), err
+	return mapper.FromSubscriptionPlanToList(subscriptionPlan), total, err
 }
 
 func (u *subscriptionPlanUsecase) Update(id string, req request.UpdateSubscriptionPlanRequest) (*response.SubscriptionPlanResponse, error) {

@@ -21,20 +21,20 @@ func (h *TenantHandler) RegisterTenant(c *fiber.Ctx) error {
 	var req request.CreateTenantRequest
 
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusUnprocessableEntity).JSON(response.ErrorResponse(err.Error(), nil))
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(response.ValidationResponse(fiber.StatusUnprocessableEntity, err))
 	}
 
-	if errValidation := validation.NewValidator().Validate(&req); errValidation != nil {
-		errs := errValidation.(validator.ValidationErrors)
+	if err := validation.NewValidator().Validate(&req); err != nil {
+		errs := err.(validator.ValidationErrors)
 		errorMessages := validation.MapValidationErrorsToJSONTags(req, errs)
-		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationResponse(errorMessages))
+		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationResponse(fiber.StatusBadRequest, errorMessages))
 	}
 
-	if errRegisterTenant := h.tenantUC.RegisterTenant(req); errRegisterTenant != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(errRegisterTenant.Error(), errRegisterTenant))
+	if err := h.tenantUC.RegisterTenant(req); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
 	}
 
-	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse("Tenant registered successfully"))
+	return c.Status(fiber.StatusCreated).JSON(response.SuccessResponse(fiber.StatusCreated, "Tenant registered successfully"))
 }
 
 func (h *TenantHandler) UpdateTenant(c *fiber.Ctx) error {
@@ -42,17 +42,17 @@ func (h *TenantHandler) UpdateTenant(c *fiber.Ctx) error {
 	var id = c.Params("id")
 
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusUnprocessableEntity).JSON(response.ErrorResponse(err.Error(), nil))
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(response.ValidationResponse(fiber.StatusUnprocessableEntity, err))
 	}
 
-	if errValidation := validation.NewValidator().Validate(&req); errValidation != nil {
-		errs := errValidation.(validator.ValidationErrors)
+	if err := validation.NewValidator().Validate(&req); err != nil {
+		errs := err.(validator.ValidationErrors)
 		errorMessages := validation.MapValidationErrorsToJSONTags(req, errs)
-		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationResponse(errorMessages))
+		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationResponse(fiber.StatusBadRequest, errorMessages))
 	}
 
-	if errUpdateTenant := h.tenantUC.Update(id, req); errUpdateTenant != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(errUpdateTenant.Error(), errUpdateTenant))
+	if err := h.tenantUC.Update(id, req); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
 	}
-	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse("Tenant updated successfully"))
+	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(fiber.StatusOK, "Tenant updated successfully"))
 }
