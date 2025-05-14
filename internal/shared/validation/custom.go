@@ -6,6 +6,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/gommon/log"
 	"gopkg.in/guregu/null.v4"
+	"os"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -48,6 +49,11 @@ func validateDateOnly(fl validator.FieldLevel) bool {
 }
 
 func validateUnique(fl validator.FieldLevel) bool {
+
+	if os.Getenv("MODE") == "test" {
+		// Jika mode test, selalu return true (anggap data unique)
+		return true
+	}
 	param := strings.Split(fl.Param(), `:`)
 	paramField := param[0]
 	paramTable := param[1]

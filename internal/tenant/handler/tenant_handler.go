@@ -14,7 +14,9 @@ type TenantHandler struct {
 }
 
 func NewTenantHandler(tenantUC usecase.TenantUsecase) *TenantHandler {
-	return &TenantHandler{tenantUC: tenantUC}
+	return &TenantHandler{
+		tenantUC: tenantUC,
+	}
 }
 
 func (h *TenantHandler) RegisterTenant(c *fiber.Ctx) error {
