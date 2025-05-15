@@ -15,3 +15,8 @@ type SubscriptionPlan struct {
 	UpdatedAt   time.Time
 	DeletedAt   gorm.DeletedAt `gorm:"index"`
 }
+
+type SubscriptionPlanChannel struct {
+	Plan *SubscriptionPlan
+	Err  error
+}

@@ -61,6 +61,8 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 	tx := u.txManager.Begin()
 
 	var err error
+	planCh := make(chan *modelTenant.SubscriptionPlanChannel)
+	roleCh := make(chan *modelUser.RoleChannel)
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -68,29 +70,11 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 			log.WithFields(log.Fields{
 				"error": r,
 			}).Error("Failed to create tenant  (panic recovered)")
-			err = fmt.Errorf("something went wrong")
+			err = fmt.Errorf("something went wrong %w", r)
 		} else if err != nil {
 			tx.Rollback()
 		}
 	}()
-
-	subscriptionPlan, err := u.subscriptionPlanRepo.GetById(request.SubscriptionPlanID)
-
-	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Error("failed to get subscription plan")
-		return fmt.Errorf("something Went wrong")
-	}
-
-	role, err := u.roleRepo.GetRole("tenant-admin")
-
-	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Error("failed to get role")
-		return fmt.Errorf("something Went wrong")
-	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -106,20 +90,47 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 		IsActive: 1,
 	}
 
-	if err = u.tenantRepo.Create(tx, tenant); err != nil {
+	go func() {
+		plan, err := u.subscriptionPlanRepo.GetById(request.SubscriptionPlanID)
+		planCh <- &modelTenant.SubscriptionPlanChannel{Plan: plan, Err: err}
+	}()
+
+	go func() {
+		role, err := u.roleRepo.GetRole("tenant-admin")
+		roleCh <- &modelUser.RoleChannel{Role: role, Err: err}
+	}()
+
+	resPlan := <-planCh
+	if resPlan.Err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
-		}).Error("failed to create tenant")
+			"error": resPlan.Err,
+		}).Error("failed to get subscription plan")
+		return fmt.Errorf("something Went wrong %w", resPlan.Err)
+	}
+
+	resRole := <-roleCh
+	if resRole.Err != nil {
+		log.WithFields(log.Fields{
+			"error": resRole.Err,
+		}).Error("failed to get role")
 		return fmt.Errorf("something Went wrong")
 	}
 
-	features, err := utils.ToStringJSON(subscriptionPlan.Feature)
+	if err = u.tenantRepo.CreateWithTx(tx, tenant); err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("failed to create tenant")
+		return fmt.Errorf("something Went wrong %w", err)
+	}
+
+	features, err := utils.ToStringJSON(resPlan.Plan.Feature)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("failed to un-marshal feature")
-		return fmt.Errorf("something Went wrong")
+		return fmt.Errorf("something Went wrong %w", err)
 	}
+
 	var tenantSettings []*modelTenant.TenantSetting
 	for key, value := range features {
 		strVal := fmt.Sprintf("%v", value)
@@ -131,33 +142,33 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 		})
 	}
 
-	if err := u.tenantSettingRepository.CreateBulk(tx, tenantSettings); err != nil {
+	if err = u.tenantSettingRepository.CreateBulk(tx, tenantSettings); err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("failed to insert tenant settings")
-		return fmt.Errorf("something went wrong")
+		return fmt.Errorf("something Went wrong %w", err)
 	}
 
 	eventCategories := service.BulkCategories(tenant.ID)
 	eventTags := service.BulkTags(tenant.ID)
 
-	if err := u.eventCategoryRepo.CreateBulkWithTx(tx, eventCategories); err != nil {
+	if err = u.eventCategoryRepo.CreateBulkWithTx(tx, eventCategories); err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("failed to insert event tags")
-		return fmt.Errorf("something went wrong")
+		return fmt.Errorf("something Went wrong %w", err)
 	}
 
-	if err := u.eventTagRepo.CreateBulkWithTx(tx, eventTags); err != nil {
+	if err = u.eventTagRepo.CreateBulkWithTx(tx, eventTags); err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("failed to insert event tags")
-		return fmt.Errorf("something went wrong")
+		return fmt.Errorf("something Went wrong %w", err)
 	}
 
 	var endDate *time.Time
-	if subscriptionPlan.DurationDay != -1 {
-		d := time.Now().AddDate(0, 0, subscriptionPlan.DurationDay)
+	if resPlan.Plan.DurationDay != -1 {
+		d := time.Now().AddDate(0, 0, resPlan.Plan.DurationDay)
 		endDate = &d
 	}
 
@@ -174,26 +185,27 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("failed to create subscription")
-		return fmt.Errorf("something Went wrong")
+		return fmt.Errorf("something Went wrong %w", err)
 	}
 
 	user := &modelUser.User{
 		ID:       utils.GenerateID(),
 		TenantID: tenant.ID,
-		RoleID:   role.ID,
+		RoleID:   resRole.Role.ID,
 		Name:     request.Name,
 		Email:    request.Email,
 		Password: string(hashedPassword),
 		IsActive: 1,
 	}
-	if err := u.userRepo.Create(tx, user); err != nil {
+	if err = u.userRepo.Create(tx, user); err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("failed to create user")
-		return fmt.Errorf("something Went wrong")
+		return fmt.Errorf("something Went wrong %w", err)
 	}
 
-	return tx.Commit().Error
+	err = tx.Commit().Error
+	return err
 }
 
 func (u *tenantUsecase) Update(id string, req request.UpdateTenantRequest) error {

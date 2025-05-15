@@ -10,3 +10,8 @@ type Role struct {
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
+
+type RoleChannel struct {
+	Role *Role
+	Err  error
+}

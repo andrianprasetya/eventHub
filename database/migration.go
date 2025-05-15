@@ -1,11 +1,11 @@
 package database
 
 import (
-	modelOrder "github.com/andrianprasetya/eventHub/internal/Order/model"
 	modelAuditSecurity "github.com/andrianprasetya/eventHub/internal/audit_security_log/model"
 	modelCheckIn "github.com/andrianprasetya/eventHub/internal/check_in/model"
 	modelCommunication "github.com/andrianprasetya/eventHub/internal/communication/model"
 	modelEvent "github.com/andrianprasetya/eventHub/internal/event/model"
+	modelOrder "github.com/andrianprasetya/eventHub/internal/order/model"
 	modelReport "github.com/andrianprasetya/eventHub/internal/report/model"
 	modelTenant "github.com/andrianprasetya/eventHub/internal/tenant/model"
 	modelTicket "github.com/andrianprasetya/eventHub/internal/ticket/model"
