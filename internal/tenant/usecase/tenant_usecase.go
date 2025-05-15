@@ -209,13 +209,13 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 }
 
 func (u *tenantUsecase) Update(id string, req request.UpdateTenantRequest) error {
-	tenant, errGetTenant := u.tenantRepo.GetByID(id)
+	tenant, err := u.tenantRepo.GetByID(id)
 
-	if errGetTenant != nil {
+	if err != nil {
 		log.WithFields(log.Fields{
-			"error": errGetTenant,
+			"error": err,
 		}).Error("failed to get tenant")
-		return fmt.Errorf("something Went wrong")
+		return fmt.Errorf("something Went wrong %w", err)
 	}
 
 	if req.Name != nil {
@@ -229,7 +229,7 @@ func (u *tenantUsecase) Update(id string, req request.UpdateTenantRequest) error
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("failed to update tenant")
-		return fmt.Errorf("something Went wrong")
+		return fmt.Errorf("something Went wrong %w", err)
 	}
 
 	return nil
