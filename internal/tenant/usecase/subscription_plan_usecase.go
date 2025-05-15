@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"fmt"
-	"github.com/andrianprasetya/eventHub/internal/shared/middleware"
 	"github.com/andrianprasetya/eventHub/internal/shared/utils"
 	"github.com/andrianprasetya/eventHub/internal/tenant/dto/mapper"
 	"github.com/andrianprasetya/eventHub/internal/tenant/dto/request"
@@ -13,7 +12,7 @@ import (
 )
 
 type SubscriptionPlanUsecase interface {
-	Create(req request.CreateSubscriptionPlanRequest, authUser middleware.AuthUser) (*response.SubscriptionPlanResponse, error)
+	Create(req request.CreateSubscriptionPlanRequest) (*response.SubscriptionPlanResponse, error)
 	GetAll(page, pageSize int) ([]*response.SubscriptionPlanListItemResponse, int64, error)
 	GetByID(id string) (*response.SubscriptionPlanResponse, error)
 	Update(id string, req request.UpdateSubscriptionPlanRequest) (*response.SubscriptionPlanResponse, error)
@@ -28,7 +27,7 @@ func NewSubscriptionPlanUsecase(subscriptionPlanRepo repository.SubscriptionPlan
 	return &subscriptionPlanUsecase{subscriptionPlanRepo: subscriptionPlanRepo}
 }
 
-func (u *subscriptionPlanUsecase) Create(req request.CreateSubscriptionPlanRequest, authUser middleware.AuthUser) (*response.SubscriptionPlanResponse, error) {
+func (u *subscriptionPlanUsecase) Create(req request.CreateSubscriptionPlanRequest) (*response.SubscriptionPlanResponse, error) {
 	features := utils.ToJSONString(req.Feature)
 
 	subscriptionPlan := &model.SubscriptionPlan{
@@ -43,7 +42,7 @@ func (u *subscriptionPlanUsecase) Create(req request.CreateSubscriptionPlanReque
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("failed to create subscription plan")
-		return &response.SubscriptionPlanResponse{}, fmt.Errorf("something Went wrong")
+		return &response.SubscriptionPlanResponse{}, fmt.Errorf("something Went wrong %w", err)
 	}
 	return mapper.FromUserModel(subscriptionPlan), nil
 }

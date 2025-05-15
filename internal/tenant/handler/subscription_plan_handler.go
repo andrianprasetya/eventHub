@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"github.com/andrianprasetya/eventHub/internal/shared/middleware"
 	"github.com/andrianprasetya/eventHub/internal/shared/response"
 	"github.com/andrianprasetya/eventHub/internal/shared/validation"
 	"github.com/andrianprasetya/eventHub/internal/tenant/dto/request"
@@ -54,13 +53,12 @@ func (h *SubscriptionPlanHandler) Create(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusUnprocessableEntity).JSON(response.ValidationResponse(fiber.StatusUnprocessableEntity, err))
 	}
-	userAuth := c.Locals("user").(middleware.AuthUser)
 	if err := validation.NewValidator().Validate(&req); err != nil {
 		errs := err.(validator.ValidationErrors)
 		errorMessages := validation.MapValidationErrorsToJSONTags(req, errs)
 		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationResponse(fiber.StatusBadRequest, errorMessages))
 	}
-	subscriptionPlan, err := h.subscriptionPlanUC.Create(req, userAuth)
+	subscriptionPlan, err := h.subscriptionPlanUC.Create(req)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
 	}
