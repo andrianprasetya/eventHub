@@ -6,7 +6,7 @@ import (
 )
 
 type TenantSettingRepository interface {
-	CreateBulk(tx *gorm.DB, tenantSettings []*modelTenant.TenantSetting) error
+	CreateBulkWithTx(tx *gorm.DB, tenantSettings []*modelTenant.TenantSetting) error
 }
 
 type tenantSettingRepository struct {
@@ -17,6 +17,6 @@ func NewTenantSettingRepository(db *gorm.DB) TenantSettingRepository {
 	return &tenantSettingRepository{DB: db}
 }
 
-func (r *tenantSettingRepository) CreateBulk(tx *gorm.DB, tenantSettings []*modelTenant.TenantSetting) error {
+func (r *tenantSettingRepository) CreateBulkWithTx(tx *gorm.DB, tenantSettings []*modelTenant.TenantSetting) error {
 	return tx.Create(tenantSettings).Error
 }

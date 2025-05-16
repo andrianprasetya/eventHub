@@ -1,6 +1,9 @@
 package model
 
-import "time"
+import (
+	"gorm.io/gorm"
+	"time"
+)
 
 type Role struct {
 	ID          string `gorm:"type:varchar(50);primary_key:true"`
@@ -9,6 +12,7 @@ type Role struct {
 	Description string `gorm:"type:text;not null"`
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
+	DeletedAt   gorm.DeletedAt `gorm:"index"`
 }
 
 type RoleChannel struct {

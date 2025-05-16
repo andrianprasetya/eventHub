@@ -91,12 +91,12 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 	}
 
 	go func() {
-		plan, err := u.subscriptionPlanRepo.GetById(request.SubscriptionPlanID)
+		plan, err := u.subscriptionPlanRepo.GetByID(request.SubscriptionPlanID)
 		planCh <- &modelTenant.SubscriptionPlanChannel{Plan: plan, Err: err}
 	}()
 
 	go func() {
-		role, err := u.roleRepo.GetRole("tenant-admin")
+		role, err := u.roleRepo.GetByID("tenant-admin")
 		roleCh <- &modelUser.RoleChannel{Role: role, Err: err}
 	}()
 
@@ -142,7 +142,7 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 		})
 	}
 
-	if err = u.tenantSettingRepository.CreateBulk(tx, tenantSettings); err != nil {
+	if err = u.tenantSettingRepository.CreateBulkWithTx(tx, tenantSettings); err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("failed to insert tenant settings")
@@ -181,7 +181,7 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 		IsActive:  1,
 	}
 
-	if err = u.subscriptionRepo.Create(tx, subscription); err != nil {
+	if err = u.subscriptionRepo.CreateWithTx(tx, subscription); err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("failed to create subscription")
@@ -197,7 +197,7 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 		Password: string(hashedPassword),
 		IsActive: 1,
 	}
-	if err = u.userRepo.Create(tx, user); err != nil {
+	if err = u.userRepo.CreateWithTx(tx, user); err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("failed to create user")

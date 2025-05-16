@@ -17,12 +17,14 @@ func SetupRoutes(c *fiber.App,
 	tenantUC tenantUsecase.TenantUsecase,
 	subscriptionPlanUC tenantUsecase.SubscriptionPlanUsecase,
 	userUC userUsecase.UserUsecase,
+	roleUC userUsecase.RoleUsecase,
 	eventUC eventUsecase.EventUsecase) {
 
 	tenantHandler := TH.NewTenantHandler(tenantUC)
 	subscriptionPlanHandler := TH.NewSubscriptionPlanHandler(subscriptionPlanUC)
 	authHandler := UH.NewAuthHandler(userUC)
 	userHandler := UH.NewUserHandler(userUC)
+	roleHandler := UH.NewRoleHandler(roleUC)
 	eventHandler := EH.NewEventHandler(eventUC)
 
 	//without auth
@@ -42,12 +44,19 @@ func SetupRoutes(c *fiber.App,
 
 	//domain groups
 	user := domain.Group("/user")
+	role := domain.Group("/role")
 	tenant := domain.Group("/tenant")
 	event := domain.Group("/event")
 	subscriptionPrivate := domain.Group("/subscription")
 
 	//user
 	user.Post("/create", userHandler.Create)
+	user.Get("/get-all", userHandler.GetAll)
+	user.Get("/get/:id", userHandler.GetByID)
+
+	//role
+	role.Get("/get-all", roleHandler.GetAll)
+	role.Get("/get/:id", roleHandler.GetByID)
 
 	//tenant
 	tenant.Post("/update/:id", tenantHandler.UpdateTenant)

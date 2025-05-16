@@ -7,7 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func FromUserModel(subscriptionPlan *model.SubscriptionPlan) *response.SubscriptionPlanResponse {
+func FromSubscriptionModel(subscriptionPlan *model.SubscriptionPlan) *response.SubscriptionPlanResponse {
 	feature, err := utils.ToStringJSON(subscriptionPlan.Feature)
 	if err != nil {
 		log.WithFields(log.Fields{

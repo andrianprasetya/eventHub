@@ -2,6 +2,7 @@ package model
 
 import (
 	modelTenant "github.com/andrianprasetya/eventHub/internal/tenant/model"
+	"gorm.io/gorm"
 
 	"time"
 )
@@ -18,4 +19,5 @@ type User struct {
 	Role      Role               `gorm:"foreignKey:RoleID;references:ID"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	DeletedAt gorm.DeletedAt `gorm:"index"`
 }

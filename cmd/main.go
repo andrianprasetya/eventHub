@@ -63,6 +63,7 @@ func main() {
 		eventCategoryRepo)
 	subscriptionPlanUC := tenantUsecase.NewSubscriptionPlanUsecase(subscriptionPlanRepo)
 	userUC := userUsecase.NewUserUsecase(txManager, userRepo, roleRepo, loginHistoryRepo, logActivityRepo)
+	roleUC := userUsecase.NewRoleUsecase(roleRepo)
 	eventUC := eventUsecase.NewEventUsecase(
 		txManager,
 		eventRepo,
@@ -73,7 +74,7 @@ func main() {
 		discountRepo,
 		logActivityRepo)
 
-	routes.SetupRoutes(app, redis, tenantUC, subscriptionPlanUC, userUC, eventUC)
+	routes.SetupRoutes(app, redis, tenantUC, subscriptionPlanUC, userUC, roleUC, eventUC)
 
 	log.Fatal(app.Listen(fmt.Sprintf("%s:%s", *host, *port)))
 }

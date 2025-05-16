@@ -8,7 +8,7 @@ import (
 type SubscriptionPlanRepository interface {
 	Create(subscriptionPlan *model.SubscriptionPlan) error
 	GetAll(page, pageSize int) ([]*model.SubscriptionPlan, int64, error)
-	GetById(id string) (*model.SubscriptionPlan, error)
+	GetByID(id string) (*model.SubscriptionPlan, error)
 	Update(subscriptionPlan *model.SubscriptionPlan) error
 	Delete(id string) error
 }
@@ -40,7 +40,7 @@ func (r *subscriptionPlanRepository) GetAll(page, pageSize int) ([]*model.Subscr
 	return subscriptionPlans, total, nil
 }
 
-func (r *subscriptionPlanRepository) GetById(id string) (*model.SubscriptionPlan, error) {
+func (r *subscriptionPlanRepository) GetByID(id string) (*model.SubscriptionPlan, error) {
 	var subscriptionPlan model.SubscriptionPlan
 	if err := r.DB.First(&subscriptionPlan, "id = ?", id).Error; err != nil {
 		return nil, err

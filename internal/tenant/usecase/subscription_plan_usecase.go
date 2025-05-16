@@ -44,17 +44,23 @@ func (u *subscriptionPlanUsecase) Create(req request.CreateSubscriptionPlanReque
 		}).Error("failed to create subscription plan")
 		return &response.SubscriptionPlanResponse{}, fmt.Errorf("something Went wrong %w", err)
 	}
-	return mapper.FromUserModel(subscriptionPlan), nil
+	return mapper.FromSubscriptionModel(subscriptionPlan), nil
 }
 
 func (u *subscriptionPlanUsecase) GetAll(page, pageSize int) ([]*response.SubscriptionPlanListItemResponse, int64, error) {
 	subscriptionPlan, total, err := u.subscriptionPlanRepo.GetAll(page, pageSize)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("failed to get subscription plan")
+		return nil, 0, fmt.Errorf("something Went wrong %w", err)
+	}
 
 	return mapper.FromSubscriptionPlanToList(subscriptionPlan), total, err
 }
 
 func (u *subscriptionPlanUsecase) Update(id string, req request.UpdateSubscriptionPlanRequest) (*response.SubscriptionPlanResponse, error) {
-	subscriptionPlan, err := u.subscriptionPlanRepo.GetById(id)
+	subscriptionPlan, err := u.subscriptionPlanRepo.GetByID(id)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -82,18 +88,18 @@ func (u *subscriptionPlanUsecase) Update(id string, req request.UpdateSubscripti
 		return &response.SubscriptionPlanResponse{}, fmt.Errorf("something Went wrong")
 	}
 
-	return mapper.FromUserModel(subscriptionPlan), nil
+	return mapper.FromSubscriptionModel(subscriptionPlan), nil
 }
 
 func (u *subscriptionPlanUsecase) GetByID(id string) (*response.SubscriptionPlanResponse, error) {
-	subscriptionPlan, err := u.subscriptionPlanRepo.GetById(id)
+	subscriptionPlan, err := u.subscriptionPlanRepo.GetByID(id)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("failed to get subscription plan")
 		return &response.SubscriptionPlanResponse{}, fmt.Errorf("something Went wrong")
 	}
-	return mapper.FromUserModel(subscriptionPlan), nil
+	return mapper.FromSubscriptionModel(subscriptionPlan), nil
 }
 
 func (u *subscriptionPlanUsecase) Delete(id string) error {

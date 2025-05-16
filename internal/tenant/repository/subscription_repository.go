@@ -6,7 +6,7 @@ import (
 )
 
 type SubscriptionRepository interface {
-	Create(tx *gorm.DB, subscription *model.Subscription) error
+	CreateWithTx(tx *gorm.DB, subscription *model.Subscription) error
 }
 
 type subscriptionRepository struct {
@@ -17,6 +17,6 @@ func NewSubscriptionRepository(db *gorm.DB) SubscriptionRepository {
 	return &subscriptionRepository{DB: db}
 }
 
-func (r subscriptionRepository) Create(tx *gorm.DB, subscription *model.Subscription) error {
+func (r subscriptionRepository) CreateWithTx(tx *gorm.DB, subscription *model.Subscription) error {
 	return tx.Create(&subscription).Error
 }
