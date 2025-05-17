@@ -40,45 +40,34 @@ func SetupRoutes(c *fiber.App,
 	//with auth
 	v1ApiPrivate := c.Group("/api/v1", middleware.AuthMiddleware(redisClient))
 
-	//group without domain
-	subscriptionPrivate := v1ApiPrivate.Group("/subscription")
-	userAdmin := v1ApiPrivate.Group("/user")
+	user := v1ApiPrivate.Group("/user")
+	role := v1ApiPrivate.Group("/role")
+	tenant := v1ApiPrivate.Group("/tenant")
+	event := v1ApiPrivate.Group("/event")
+	subscription := v1ApiPrivate.Group("/subscription")
 
 	//user
-	userAdmin.Get("/get-all", userHandler.GetAll, middleware.RequireRole("super-admin"))
-	userAdmin.Get("/get/:id", userHandler.GetByID, middleware.RequireRole("super-admin"))
-
-	//subscription
-	subscriptionPrivate.Post("/create", subscriptionPlanHandler.Create, middleware.RequireRole("super-admin"))
-	subscriptionPrivate.Post("/update/:id", subscriptionPlanHandler.Update, middleware.RequireRole("super-admin"))
-	subscriptionPrivate.Delete("/delete/:id", subscriptionPlanHandler.Delete, middleware.RequireRole("super-admin"))
-
-	domain := v1ApiPrivate.Group("/:domain")
-
-	//domain groups
-	user := domain.Group("/user")
-	role := domain.Group("/role")
-	tenant := domain.Group("/tenant")
-	event := domain.Group("/event")
-
-	//user
-	user.Post("/create", userHandler.Create, middleware.RequireRole("tenant-admin"))
+	user.Post("/create", middleware.RequireRole("tenant-admin"), userHandler.Create)
 	user.Get("/get-all", userHandler.GetAll)
 	user.Get("/get/:id", userHandler.GetByID)
-	user.Post("/update/:id", userHandler.Update, middleware.RequireRole("tenant-admin"))
-	user.Delete("/delete/:id", userHandler.Delete, middleware.RequireRole("tenant-admin"))
+	user.Post("/update/:id", middleware.RequireRole("tenant-admin"), userHandler.Update)
+	user.Delete("/delete/:id", middleware.RequireRole("tenant-admin"), userHandler.Delete)
 
 	//role
 	role.Get("/get-all", roleHandler.GetAll)
 	role.Get("/get/:id", roleHandler.GetByID)
 
 	//tenant
-	tenant.Post("/update-information/:id", tenantHandler.UpdateInformation, middleware.RequireRole("tenant-admin"))
-	tenant.Post("/update-information/:id", tenantHandler.UpdateInformation, middleware.RequireRole("tenant-admin"))
+	tenant.Post("/update-information/:id", middleware.RequireRole("tenant-admin"), tenantHandler.UpdateInformation)
+	tenant.Post("/update-information/:id", middleware.RequireRole("tenant-admin"), tenantHandler.UpdateInformation)
 
 	//event
-	event.Get("/get-tags", eventHandler.GetTags, middleware.RequireRole("tenant-admin", "organizer"))
-	event.Get("/get-categories", eventHandler.GetCategories, middleware.RequireRole("tenant-admin", "organizer"))
-	event.Post("/create", eventHandler.Create, middleware.RequireRole("tenant-admin", "organizer"))
+	event.Get("/get-tags", middleware.RequireRole("tenant-admin", "organizer"), eventHandler.GetTags)
+	event.Get("/get-categories", middleware.RequireRole("tenant-admin", "organizer"), eventHandler.GetCategories)
+	event.Post("/create", middleware.RequireRole("tenant-admin", "organizer"), eventHandler.Create)
 
+	//subscription
+	subscription.Post("/create", middleware.RequireRole("super-admin"), subscriptionPlanHandler.Create)
+	subscription.Post("/update/:id", middleware.RequireRole("super-admin"), subscriptionPlanHandler.Update)
+	subscription.Delete("/delete/:id", middleware.RequireRole("super-admin"), subscriptionPlanHandler.Delete)
 }
