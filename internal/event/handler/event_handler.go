@@ -64,3 +64,24 @@ func (h *EventHandler) Create(c *fiber.Ctx) error {
 	}
 	return c.Status(fiber.StatusOK).JSON(response.SuccessWithDataResponse(fiber.StatusOK, "Create Event successfully", event))
 }
+
+func (h *EventHandler) GetAll(c *fiber.Ctx) error {
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	pageSize, _ := strconv.Atoi(c.Query("pageSize", "10"))
+
+	events, total, err := h.eventUC.GetAll(page, pageSize)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
+	}
+	return c.Status(fiber.StatusOK).JSON(response.SuccessWithPaginateDataResponse(fiber.StatusOK, "Get Event Successfully", events, page, pageSize, total))
+}
+
+func (h *EventHandler) GetByID(c *fiber.Ctx) error {
+	id := c.Params("id")
+
+	event, err := h.eventUC.GetByID(id)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
+	}
+	return c.Status(fiber.StatusOK).JSON(response.SuccessWithDataResponse(fiber.StatusOK, "Get Event Successfully", event))
+}

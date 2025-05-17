@@ -26,6 +26,8 @@ type UserUsecase interface {
 	Create(req request.CreateUserRequest, auth *middleware.AuthUser, url string) error
 	GetAll(page, pageSize int) ([]*response.UserListItemResponse, int64, error)
 	GetByID(id string) (*response.UserResponse, error)
+	Update(id string) error
+	Delete(id string) error
 }
 
 type userUsecase struct {
@@ -197,4 +199,18 @@ func (u *userUsecase) GetByID(id string) (*response.UserResponse, error) {
 		return nil, fmt.Errorf("something Went wrong %w", err)
 	}
 	return mapper.FromUserModel(user), err
+}
+
+func (u *userUsecase) Update(id string) error {
+	user, err := u.userRepo.GetByID(id)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("failed to get users")
+		return nil, fmt.Errorf("something Went wrong %w", err)
+	}
+
+	if {
+
+	}
 }
