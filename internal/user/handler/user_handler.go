@@ -43,8 +43,14 @@ func (h *UserHandler) Create(c *fiber.Ctx) error {
 func (h *UserHandler) GetAll(c *fiber.Ctx) error {
 	page, _ := strconv.Atoi(c.Query("page", "1"))
 	pageSize, _ := strconv.Atoi(c.Query("pageSize", "1"))
+	userAuth := c.Locals("user").(middleware.AuthUser)
 
-	users, total, err := h.userUC.GetAll(page, pageSize)
+	var tenantID *string
+	if userAuth.Tenant.ID != "" {
+		tenantID = &userAuth.Tenant.ID
+	}
+
+	users, total, err := h.userUC.GetAll(page, pageSize, tenantID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
 	}

@@ -10,7 +10,7 @@ type UserRepository interface {
 	CreateWithTx(tx *gorm.DB, user *model.User) error
 	GetByEmail(email string) (*model.User, error)
 	GetByID(id string) (*model.User, error)
-	GetAll(page, pageSize int) ([]*model.User, int64, error)
+	GetAll(page, pageSize int, tenantID *string) ([]*model.User, int64, error)
 	Update(user *model.User) error
 	Delete(id string) error
 }
@@ -39,16 +39,22 @@ func (r *userRepository) GetByEmail(email string) (*model.User, error) {
 	return &user, nil
 }
 
-func (r *userRepository) GetAll(page, pageSize int) ([]*model.User, int64, error) {
+func (r *userRepository) GetAll(page, pageSize int, tenantID *string) ([]*model.User, int64, error) {
 	var users []*model.User
 	var total int64
-	if err := r.DB.Model(&model.User{}).Count(&total).Error; err != nil {
+
+	db := r.DB.Model(&model.User{})
+	if tenantID != nil {
+		db = db.Where("tenant_id = ?", tenantID)
+	}
+
+	if err := db.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
 	offset := (page - 1) * pageSize
 
-	if err := r.DB.Preload("Role").Limit(pageSize).Offset(offset).Find(&users).Error; err != nil {
+	if err := db.Preload("Role").Limit(pageSize).Offset(offset).Find(&users).Error; err != nil {
 		return nil, 0, err
 	}
 	return users, total, nil

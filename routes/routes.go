@@ -40,6 +40,19 @@ func SetupRoutes(c *fiber.App,
 	//with auth
 	v1ApiPrivate := c.Group("/api/v1", middleware.AuthMiddleware(redisClient))
 
+	//group without domain
+	subscriptionPrivate := v1ApiPrivate.Group("/subscription")
+	userAdmin := v1ApiPrivate.Group("/user")
+
+	//user
+	userAdmin.Get("/get-all", userHandler.GetAll, middleware.RequireRole("super-admin"))
+	userAdmin.Get("/get/:id", userHandler.GetByID, middleware.RequireRole("super-admin"))
+
+	//subscription
+	subscriptionPrivate.Post("/create", subscriptionPlanHandler.Create, middleware.RequireRole("super-admin"))
+	subscriptionPrivate.Post("/update/:id", subscriptionPlanHandler.Update, middleware.RequireRole("super-admin"))
+	subscriptionPrivate.Delete("/delete/:id", subscriptionPlanHandler.Delete, middleware.RequireRole("super-admin"))
+
 	domain := v1ApiPrivate.Group("/:domain")
 
 	//domain groups
@@ -47,7 +60,6 @@ func SetupRoutes(c *fiber.App,
 	role := domain.Group("/role")
 	tenant := domain.Group("/tenant")
 	event := domain.Group("/event")
-	subscriptionPrivate := domain.Group("/subscription")
 
 	//user
 	user.Post("/create", userHandler.Create, middleware.RequireRole("tenant-admin"))
@@ -63,11 +75,6 @@ func SetupRoutes(c *fiber.App,
 	//tenant
 	tenant.Post("/update-information/:id", tenantHandler.UpdateInformation, middleware.RequireRole("tenant-admin"))
 	tenant.Post("/update-information/:id", tenantHandler.UpdateInformation, middleware.RequireRole("tenant-admin"))
-
-	//subscription
-	subscriptionPrivate.Post("/create", subscriptionPlanHandler.Create, middleware.RequireRole("super-admin"))
-	subscriptionPrivate.Post("/update/:id", subscriptionPlanHandler.Update, middleware.RequireRole("super-admin"))
-	subscriptionPrivate.Delete("/delete/:id", subscriptionPlanHandler.Delete, middleware.RequireRole("super-admin"))
 
 	//event
 	event.Get("/get-tags", eventHandler.GetTags, middleware.RequireRole("tenant-admin", "organizer"))
