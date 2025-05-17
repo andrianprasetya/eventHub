@@ -23,6 +23,8 @@ type EventUsecase interface {
 	Create(req request.CreateEventRequest, auth middleware.AuthUser, url string) (*response.EventResponse, error)
 	GetTags(page, pageSize int) ([]*response.EventTagListItemResponse, int64, error)
 	GetCategories(page, pageSize int) ([]*response.EventCategoryListItemResponse, int64, error)
+	GetAll(page, pageSize int) ([]*response.EventListItemResponse, int64, error)
+	GetByID(id string) (*response.EventResponse, error)
 }
 
 type eventUsecase struct {
@@ -173,7 +175,7 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 		helper.LogActivity(u.activityRepo, auth.ID, url, "Create Event", string(userJSON), "event", event.ID)
 	}
 
-	return mapper.FromUserModel(event), err
+	return mapper.FromEventModel(event), err
 }
 
 func (u *eventUsecase) GetTags(page, pageSize int) ([]*response.EventTagListItemResponse, int64, error) {
@@ -185,4 +187,16 @@ func (u *eventUsecase) GetCategories(page, pageSize int) ([]*response.EventCateg
 	eventCategories, total, err := u.eventCategoryRepo.GetAll(page, pageSize)
 
 	return mapper.FromEventCategoryToList(eventCategories), total, err
+}
+
+func (u *eventUsecase) GetAll(page, pageSize int) ([]*response.EventListItemResponse, int64, error) {
+	events, total, err := u.eventRepo.GetAll(page, pageSize)
+
+	return mapper.FromEventToList(events), total, err
+}
+
+func (u *eventUsecase) GetByID(id string) (*response.EventResponse, error) {
+	event, err := u.eventRepo.GetByID(id)
+
+	return mapper.FromEventModel(event), err
 }

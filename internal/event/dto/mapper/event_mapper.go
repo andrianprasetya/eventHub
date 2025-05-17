@@ -5,7 +5,7 @@ import (
 	"github.com/andrianprasetya/eventHub/internal/event/model"
 )
 
-func FromUserModel(event *model.Event) *response.EventResponse {
+func FromEventModel(event *model.Event) *response.EventResponse {
 	return &response.EventResponse{
 		ID:    event.ID,
 		Title: event.Title,
@@ -20,6 +20,26 @@ func FromUserModel(event *model.Event) *response.EventResponse {
 		EndDate:     event.EndDate,
 		Status:      event.Status,
 	}
+}
+
+func FromEventToListItem(event *model.Event) *response.EventListItemResponse {
+	return &response.EventListItemResponse{
+		ID:           event.ID,
+		Title:        event.Title,
+		CategoryName: event.Category.Name,
+		Tags:         *event.Tags,
+		StartDate:    event.StartDate,
+		EndDate:      event.EndDate,
+		Status:       event.Status,
+	}
+}
+
+func FromEventToList(events []*model.Event) []*response.EventListItemResponse {
+	result := make([]*response.EventListItemResponse, 0, len(events))
+	for _, event := range events {
+		result = append(result, FromEventToListItem(event))
+	}
+	return result
 }
 
 func FromEventTagToListItem(eventTag *model.EventTag) *response.EventTagListItemResponse {

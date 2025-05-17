@@ -1,6 +1,8 @@
 package response
 
-import "time"
+import (
+	"time"
+)
 
 type EventResponse struct {
 	ID          string    `json:"id"`
@@ -17,6 +19,16 @@ type EventResponse struct {
 type Category struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+}
+
+type EventListItemResponse struct {
+	ID           string    `json:"ID"`
+	Title        string    `json:"title"`
+	CategoryName string    `json:"category_name"`
+	Tags         []string  `json:"tags"`
+	StartDate    time.Time `json:"start_date"`
+	EndDate      time.Time `json:"end_date"`
+	Status       string    `json:"status"`
 }
 
 type EventTagListItemResponse struct {
