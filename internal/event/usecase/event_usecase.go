@@ -68,7 +68,7 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 		if r := recover(); r != nil {
 			tx.Rollback()
 			log.WithFields(log.Fields{
-				"error": r,
+				"errors": r,
 			}).Error("Failed to create event  (panic recovered)")
 			err = fmt.Errorf("something went wrong")
 		} else if err != nil {
@@ -91,14 +91,14 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 
 	if err = u.eventRepo.Create(tx, event); err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to create event")
 		return &response.EventResponse{}, err
 	}
 
 	if err = u.eventCategoryRepo.AddCategoryToEventWithTx(tx, event.ID, event); err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to add category to event")
 		return &response.EventResponse{}, err
 	}
@@ -116,7 +116,7 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 
 	if err = u.ticketRepo.CreateBulkWithTx(tx, eventTickets); err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to create ticket")
 		return &response.EventResponse{}, err
 	}
@@ -135,7 +135,7 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 
 	if err = u.discountRepo.CreateBulkWithTx(tx, discounts); err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to create discount ticket")
 		return &response.EventResponse{}, err
 	}
@@ -152,7 +152,7 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 
 	if err = u.eventSessionRepo.CreateBulkWithTx(tx, sessions); err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to create event session")
 		return &response.EventResponse{}, err
 	}

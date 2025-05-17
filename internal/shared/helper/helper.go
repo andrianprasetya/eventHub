@@ -27,7 +27,7 @@ func LogLoginHistory(repo repository.LoginHistoryRepository, userId, ip string) 
 
 		if err := repo.Create(log); err != nil {
 			logging.WithFields(logging.Fields{
-				"error": err,
+				"errors": err,
 			}).Error("failed to Log Login History")
 		}
 	}(log)
@@ -54,7 +54,7 @@ func LogActivity(repo repository.LogActivityRepository, userId, url, action, obj
 		}()
 		if err := repo.Create(activity); err != nil {
 			logging.WithFields(logging.Fields{
-				"error": err,
+				"errors": err,
 			}).Error("failed to Log Activity")
 		}
 	}(activity)

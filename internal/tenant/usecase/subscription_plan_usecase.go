@@ -40,7 +40,7 @@ func (u *subscriptionPlanUsecase) Create(req request.CreateSubscriptionPlanReque
 
 	if err := u.subscriptionPlanRepo.Create(subscriptionPlan); err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to create subscription plan")
 		return &response.SubscriptionPlanResponse{}, fmt.Errorf("something Went wrong %w", err)
 	}
@@ -51,7 +51,7 @@ func (u *subscriptionPlanUsecase) GetAll(page, pageSize int) ([]*response.Subscr
 	subscriptionPlan, total, err := u.subscriptionPlanRepo.GetAll(page, pageSize)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to get subscription plan")
 		return nil, 0, fmt.Errorf("something Went wrong %w", err)
 	}
@@ -63,7 +63,7 @@ func (u *subscriptionPlanUsecase) Update(id string, req request.UpdateSubscripti
 	subscriptionPlan, err := u.subscriptionPlanRepo.GetByID(id)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to get subscription plan")
 		return &response.SubscriptionPlanResponse{}, fmt.Errorf("something Went wrong")
 	}
@@ -83,7 +83,7 @@ func (u *subscriptionPlanUsecase) Update(id string, req request.UpdateSubscripti
 
 	if err := u.subscriptionPlanRepo.Update(subscriptionPlan); err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to create subscription plan")
 		return &response.SubscriptionPlanResponse{}, fmt.Errorf("something Went wrong")
 	}
@@ -95,7 +95,7 @@ func (u *subscriptionPlanUsecase) GetByID(id string) (*response.SubscriptionPlan
 	subscriptionPlan, err := u.subscriptionPlanRepo.GetByID(id)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to get subscription plan")
 		return &response.SubscriptionPlanResponse{}, fmt.Errorf("something Went wrong")
 	}
@@ -105,7 +105,7 @@ func (u *subscriptionPlanUsecase) GetByID(id string) (*response.SubscriptionPlan
 func (u *subscriptionPlanUsecase) Delete(id string) error {
 	if err := u.subscriptionPlanRepo.Delete(id); err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to delete subscription plan")
 		return fmt.Errorf("something Went wrong")
 	}

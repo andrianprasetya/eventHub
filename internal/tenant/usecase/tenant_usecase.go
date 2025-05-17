@@ -69,7 +69,7 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 		if r := recover(); r != nil {
 			tx.Rollback()
 			log.WithFields(log.Fields{
-				"error": r,
+				"errors": r,
 			}).Error("Failed to create tenant  (panic recovered)")
 			err = fmt.Errorf("something went wrong %w", r)
 		} else if err != nil {
@@ -104,7 +104,7 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 	resPlan := <-planCh
 	if resPlan.Err != nil {
 		log.WithFields(log.Fields{
-			"error": resPlan.Err,
+			"errors": resPlan.Err,
 		}).Error("failed to get subscription plan")
 		return fmt.Errorf("something Went wrong %w", resPlan.Err)
 	}
@@ -112,14 +112,14 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 	resRole := <-roleCh
 	if resRole.Err != nil {
 		log.WithFields(log.Fields{
-			"error": resRole.Err,
+			"errors": resRole.Err,
 		}).Error("failed to get role")
 		return fmt.Errorf("something Went wrong")
 	}
 
 	if err = u.tenantRepo.CreateWithTx(tx, tenant); err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to create tenant")
 		return fmt.Errorf("something Went wrong %w", err)
 	}
@@ -127,7 +127,7 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 	features, err := utils.ToStringJSON(resPlan.Plan.Feature)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to un-marshal feature")
 		return fmt.Errorf("something Went wrong %w", err)
 	}
@@ -145,7 +145,7 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 
 	if err = u.tenantSettingRepository.CreateBulkWithTx(tx, tenantSettings); err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to insert tenant settings")
 		return fmt.Errorf("something Went wrong %w", err)
 	}
@@ -155,14 +155,14 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 
 	if err = u.eventCategoryRepo.CreateBulkWithTx(tx, eventCategories); err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to insert event tags")
 		return fmt.Errorf("something Went wrong %w", err)
 	}
 
 	if err = u.eventTagRepo.CreateBulkWithTx(tx, eventTags); err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to insert event tags")
 		return fmt.Errorf("something Went wrong %w", err)
 	}
@@ -184,7 +184,7 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 
 	if err = u.subscriptionRepo.CreateWithTx(tx, subscription); err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to create subscription")
 		return fmt.Errorf("something Went wrong %w", err)
 	}
@@ -200,7 +200,7 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 	}
 	if err = u.userRepo.CreateWithTx(tx, user); err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to create user")
 		return fmt.Errorf("something Went wrong %w", err)
 	}
@@ -214,7 +214,7 @@ func (u *tenantUsecase) UpdateInformation(id string, req request.UpdateInformati
 
 	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to get tenant")
 		return fmt.Errorf("something Went wrong %w", err)
 	}
@@ -228,7 +228,7 @@ func (u *tenantUsecase) UpdateInformation(id string, req request.UpdateInformati
 
 	if err := u.tenantRepo.Update(tenant); err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to update tenant")
 		return fmt.Errorf("something Went wrong %w", err)
 	}
@@ -241,7 +241,7 @@ func (u *tenantUsecase) UpdateStatus(id string, req request.UpdateStatusTenantRe
 
 	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to get tenant")
 		return fmt.Errorf("something Went wrong %w", err)
 	}
@@ -250,7 +250,7 @@ func (u *tenantUsecase) UpdateStatus(id string, req request.UpdateStatusTenantRe
 
 	if err := u.tenantRepo.Update(tenant); err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to update tenant")
 		return fmt.Errorf("something Went wrong %w", err)
 	}

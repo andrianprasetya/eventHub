@@ -25,7 +25,7 @@ func (r *roleUsecase) GetAll(page, pageSize int) ([]*response.RoleListItemRespon
 	roles, total, err := r.roleRepo.GetAll(page, pageSize)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to get Role")
 		return nil, 0, fmt.Errorf("something Went wrong %w", err)
 	}
@@ -37,7 +37,7 @@ func (r *roleUsecase) GetByID(id string) (*response.RoleResponse, error) {
 	role, err := r.roleRepo.GetByID(id)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to get Role ")
 		return nil, fmt.Errorf("something Went wrong %w", err)
 	}

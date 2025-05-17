@@ -11,7 +11,7 @@ func FromSubscriptionModel(subscriptionPlan *model.SubscriptionPlan) *response.S
 	feature, err := utils.ToStringJSON(subscriptionPlan.Feature)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to un-marshal string feature")
 	}
 
@@ -28,7 +28,7 @@ func FromSubscriptionPlanToListItem(subscriptionPlan *model.SubscriptionPlan) *r
 	feature, err := utils.ToStringJSON(subscriptionPlan.Feature)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to un-marshal string feature")
 	}
 

@@ -33,6 +33,14 @@ func (r *userRepository) CreateWithTx(tx *gorm.DB, user *model.User) error {
 
 func (r *userRepository) GetByEmail(email string) (*model.User, error) {
 	var user model.User
+	var count int64
+
+	//return kalo data tidak ada 0
+	r.DB.Model(&model.User{}).Count(&count)
+	if count == 0 {
+		return nil, nil
+	}
+
 	if err := r.DB.Preload("Tenant").Preload("Role").First(&user, "email = ?", email).Error; err != nil {
 		return nil, err
 	}

@@ -12,7 +12,7 @@ var SecretKey = os.Getenv("JWT_SECRET")
 func GenerateJWT(username string) (string, error) {
 	if SecretKey == "" {
 		log.WithFields(log.Fields{
-			"error": "cannot get value secret key or not declared on env",
+			"errors": "cannot get value secret key or not declared on env",
 		}).Error("secret key is null for jwt")
 	}
 

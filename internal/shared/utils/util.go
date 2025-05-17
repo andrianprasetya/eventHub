@@ -25,7 +25,7 @@ func GenerateDomainName(s string) string {
 func ToJSONString(v interface{}) string {
 	bytes, err := json.Marshal(v)
 	if err != nil {
-		fmt.Println("error marshalling feature:", err)
+		fmt.Println("errors marshalling feature:", err)
 		return "{}"
 	}
 	return string(bytes)

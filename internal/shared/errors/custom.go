@@ -1,4 +1,4 @@
-package error
+package errors
 
 import "fmt"
 
@@ -45,7 +45,7 @@ func Wrap(err error, message string, code int) *AppError {
 	}
 }
 
-// Jika ingin Wrap dan tetap expose (misal error input)
+// Jika ingin Wrap dan tetap expose (misal errors input)
 func WrapExpose(err error, message string, code int) *AppError {
 	return &AppError{
 		Message: message,

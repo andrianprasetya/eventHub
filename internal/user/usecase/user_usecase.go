@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	logRepository "github.com/andrianprasetya/eventHub/internal/audit_security_log/repository"
+	appErrors "github.com/andrianprasetya/eventHub/internal/shared/errors"
 	"github.com/andrianprasetya/eventHub/internal/shared/helper"
 	"github.com/andrianprasetya/eventHub/internal/shared/middleware"
 	repositoryShared "github.com/andrianprasetya/eventHub/internal/shared/repository"
@@ -18,6 +19,7 @@ import (
 	appServer "github.com/andrianprasetya/eventHub/server"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
+	"net/http"
 	"time"
 )
 
@@ -54,23 +56,29 @@ func NewUserUsecase(
 }
 
 func (u *userUsecase) Login(ctx context.Context, req request.LoginRequest, ip string) (*response.LoginResponse, error) {
-	getUser, errGetUser := u.userRepo.GetByEmail(req.Email)
+	getUser, err := u.userRepo.GetByEmail(req.Email)
 
-	if errGetUser != nil {
+	//data tidak ada
+	if getUser == nil {
+		log.Error("User Not found")
+		return nil, appErrors.ErrInvalidCredentials
+	}
+
+	if err != nil {
 		log.WithFields(log.Fields{
-			"error": errGetUser,
+			"errors": err,
 		}).Error("failed to get Email")
-		return nil, errGetUser
+		return nil, appErrors.Wrap(err, "internal server errors", http.StatusInternalServerError)
 	}
 
 	if errMatching := bcrypt.CompareHashAndPassword([]byte(getUser.Password), []byte(req.Password)); errMatching != nil {
 		log.WithFields(log.Fields{
-			"error": errMatching,
+			"errors": errMatching,
 		}).Error("failed to matching password")
-		return nil, errMatching
+		return nil, appErrors.ErrInvalidCredentials
 	}
 
-	token, errGenerateJwt := utils.GenerateJWT(req.Email)
+	token, err := utils.GenerateJWT(req.Email)
 
 	payload := &middleware.AuthUser{
 		ID:    getUser.ID,
@@ -95,18 +103,18 @@ func (u *userUsecase) Login(ctx context.Context, req request.LoginRequest, ip st
 	}
 	data, _ := json.Marshal(payload)
 	key := "user:jwt:" + token
-	if errGenerateJwt != nil {
+	if err != nil {
 		log.WithFields(log.Fields{
-			"error": errGenerateJwt,
+			"errors": err,
 		}).Error("failed to generate jwt")
-		return nil, errGenerateJwt
+		return nil, appErrors.ErrInternalServer
 	}
-	_, errRedis := appServer.RedisClient.SetWithExpire(ctx, key, data, 10*time.Minute)
-	if errRedis != nil {
+	_, err = appServer.RedisClient.SetWithExpire(ctx, key, data, 10*time.Minute)
+	if err != nil {
 		log.WithFields(log.Fields{
-			"error": errRedis,
+			"errors": err,
 		}).Error("failed to save token in redis")
-		return nil, errRedis
+		return nil, appErrors.Wrap(err, "Internal server Error", http.StatusInternalServerError)
 	}
 
 	//login login time
@@ -127,7 +135,7 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.Aut
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to bcrypt password")
 		return err
 	}
@@ -136,7 +144,7 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.Aut
 
 	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to get Role")
 		return err
 	}
@@ -153,7 +161,7 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.Aut
 
 	if err = u.userRepo.Create(user); err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to create user")
 		return fmt.Errorf("something Went wrong %w", err)
 	}
@@ -169,7 +177,7 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.Aut
 
 	userJSON, err := json.Marshal(userLog)
 	if err != nil {
-		return fmt.Errorf("error marshaling user")
+		return fmt.Errorf("errors marshaling user")
 	}
 
 	if err == nil {
@@ -183,7 +191,7 @@ func (u *userUsecase) GetAll(page, pageSize int, tenantID *string) ([]*response.
 	users, total, err := u.userRepo.GetAll(page, pageSize, tenantID)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to get users")
 		return nil, 0, fmt.Errorf("something Went wrong %w", err)
 	}
@@ -194,7 +202,7 @@ func (u *userUsecase) GetByID(id string) (*response.UserResponse, error) {
 	user, err := u.userRepo.GetByID(id)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to get users")
 		return nil, fmt.Errorf("something Went wrong %w", err)
 	}
@@ -205,7 +213,7 @@ func (u *userUsecase) Update(req request.UpdateUserRequest, id string) error {
 	user, err := u.userRepo.GetByID(id)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to get user")
 		return fmt.Errorf("something Went wrong %w", err)
 	}
@@ -219,7 +227,7 @@ func (u *userUsecase) Update(req request.UpdateUserRequest, id string) error {
 
 	if err := u.userRepo.Update(user); err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to create user")
 		return fmt.Errorf("something Went wrong %w", err)
 	}
@@ -231,7 +239,7 @@ func (u *userUsecase) Update(req request.UpdateUserRequest, id string) error {
 func (u *userUsecase) Delete(id string) error {
 	if err := u.userRepo.Delete(id); err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"errors": err,
 		}).Error("failed to delete user")
 		return fmt.Errorf("something Went wrong %w", err)
 	}
