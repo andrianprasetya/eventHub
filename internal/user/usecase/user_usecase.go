@@ -26,7 +26,7 @@ type UserUsecase interface {
 	Create(req request.CreateUserRequest, auth *middleware.AuthUser, url string) error
 	GetAll(page, pageSize int) ([]*response.UserListItemResponse, int64, error)
 	GetByID(id string) (*response.UserResponse, error)
-	Update(id string) error
+	Update(req request.UpdateUserRequest, id string) error
 	Delete(id string) error
 }
 
@@ -201,16 +201,39 @@ func (u *userUsecase) GetByID(id string) (*response.UserResponse, error) {
 	return mapper.FromUserModel(user), err
 }
 
-func (u *userUsecase) Update(id string) error {
+func (u *userUsecase) Update(req request.UpdateUserRequest, id string) error {
 	user, err := u.userRepo.GetByID(id)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
-		}).Error("failed to get users")
-		return nil, fmt.Errorf("something Went wrong %w", err)
+		}).Error("failed to get user")
+		return fmt.Errorf("something Went wrong %w", err)
 	}
 
-	if {
-
+	if req.RoleID != nil {
+		user.RoleID = *req.RoleID
 	}
+	if req.IsActive != nil {
+		user.IsActive = *req.IsActive
+	}
+
+	if err := u.userRepo.Update(user); err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("failed to create user")
+		return fmt.Errorf("something Went wrong %w", err)
+	}
+
+	return nil
+
+}
+
+func (u *userUsecase) Delete(id string) error {
+	if err := u.userRepo.Delete(id); err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("failed to delete user")
+		return fmt.Errorf("something Went wrong %w", err)
+	}
+	return nil
 }

@@ -50,16 +50,19 @@ func SetupRoutes(c *fiber.App,
 	subscriptionPrivate := domain.Group("/subscription")
 
 	//user
-	user.Post("/create", userHandler.Create)
+	user.Post("/create", userHandler.Create, middleware.RequireRole("tenant-admin"))
 	user.Get("/get-all", userHandler.GetAll)
 	user.Get("/get/:id", userHandler.GetByID)
+	user.Post("/update/:id", userHandler.Update, middleware.RequireRole("tenant-admin"))
+	user.Delete("/delete/:id", userHandler.Delete, middleware.RequireRole("tenant-admin"))
 
 	//role
 	role.Get("/get-all", roleHandler.GetAll)
 	role.Get("/get/:id", roleHandler.GetByID)
 
 	//tenant
-	tenant.Post("/update/:id", tenantHandler.UpdateTenant)
+	tenant.Post("/update-information/:id", tenantHandler.UpdateInformation, middleware.RequireRole("tenant-admin"))
+	tenant.Post("/update-information/:id", tenantHandler.UpdateInformation, middleware.RequireRole("tenant-admin"))
 
 	//subscription
 	subscriptionPrivate.Post("/create", subscriptionPlanHandler.Create, middleware.RequireRole("super-admin"))

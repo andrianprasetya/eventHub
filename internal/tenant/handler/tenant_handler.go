@@ -39,8 +39,8 @@ func (h *TenantHandler) RegisterTenant(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(response.SuccessResponse(fiber.StatusCreated, "Tenant registered successfully"))
 }
 
-func (h *TenantHandler) UpdateTenant(c *fiber.Ctx) error {
-	var req request.UpdateTenantRequest
+func (h *TenantHandler) UpdateInformation(c *fiber.Ctx) error {
+	var req request.UpdateInformationTenantRequest
 	var id = c.Params("id")
 
 	if err := c.BodyParser(&req); err != nil {
@@ -53,7 +53,27 @@ func (h *TenantHandler) UpdateTenant(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationResponse(fiber.StatusBadRequest, errorMessages))
 	}
 
-	if err := h.tenantUC.Update(id, req); err != nil {
+	if err := h.tenantUC.UpdateInformation(id, req); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
+	}
+	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(fiber.StatusOK, "Tenant updated successfully"))
+}
+
+func (h *TenantHandler) UpdateStatus(c *fiber.Ctx) error {
+	var req request.UpdateStatusTenantRequest
+	var id = c.Params("id")
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(response.ValidationResponse(fiber.StatusUnprocessableEntity, err))
+	}
+
+	if err := validation.NewValidator().Validate(&req); err != nil {
+		errs := err.(validator.ValidationErrors)
+		errorMessages := validation.MapValidationErrorsToJSONTags(req, errs)
+		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationResponse(fiber.StatusBadRequest, errorMessages))
+	}
+
+	if err := h.tenantUC.UpdateStatus(id, req); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
 	}
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(fiber.StatusOK, "Tenant updated successfully"))

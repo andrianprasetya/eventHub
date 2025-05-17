@@ -60,3 +60,31 @@ func (h *UserHandler) GetByID(c *fiber.Ctx) error {
 	}
 	return c.Status(fiber.StatusOK).JSON(response.SuccessWithDataResponse(fiber.StatusOK, "Get User Successfully", user))
 }
+
+func (h *UserHandler) Update(c *fiber.Ctx) error {
+	var req request.UpdateUserRequest
+	id := c.Params("id")
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(response.ValidationResponse(fiber.StatusUnprocessableEntity, err))
+	}
+
+	if err := validation.NewValidator().Validate(&req); err != nil {
+		errs := err.(validator.ValidationErrors)
+		errorMessages := validation.MapValidationErrorsToJSONTags(req, errs)
+		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationResponse(fiber.StatusBadRequest, errorMessages))
+	}
+
+	if err := h.userUC.Update(req, id); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
+	}
+	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(fiber.StatusOK, "Update User Successfully"))
+
+}
+
+func (h *UserHandler) Delete(c *fiber.Ctx) error {
+	id := c.Params("id")
+	if err := h.userUC.Delete(id); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
+	}
+	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(fiber.StatusOK, "Delete User Successfully"))
+}

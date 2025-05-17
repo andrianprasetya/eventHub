@@ -18,7 +18,8 @@ import (
 
 type TenantUsecase interface {
 	RegisterTenant(request request.CreateTenantRequest) error
-	Update(id string, request request.UpdateTenantRequest) error
+	UpdateInformation(id string, request request.UpdateInformationTenantRequest) error
+	UpdateStatus(id string, request request.UpdateStatusTenantRequest) error
 }
 
 type tenantUsecase struct {
@@ -96,7 +97,7 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 	}()
 
 	go func() {
-		role, err := u.roleRepo.GetByID("tenant-admin")
+		role, err := u.roleRepo.GetBySlug("tenant-admin")
 		roleCh <- &modelUser.RoleChannel{Role: role, Err: err}
 	}()
 
@@ -208,7 +209,7 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 	return err
 }
 
-func (u *tenantUsecase) Update(id string, req request.UpdateTenantRequest) error {
+func (u *tenantUsecase) UpdateInformation(id string, req request.UpdateInformationTenantRequest) error {
 	tenant, err := u.tenantRepo.GetByID(id)
 
 	if err != nil {
@@ -224,6 +225,28 @@ func (u *tenantUsecase) Update(id string, req request.UpdateTenantRequest) error
 	if req.LogoUrl != nil {
 		tenant.LogoUrl = *req.LogoUrl
 	}
+
+	if err := u.tenantRepo.Update(tenant); err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("failed to update tenant")
+		return fmt.Errorf("something Went wrong %w", err)
+	}
+
+	return nil
+}
+
+func (u *tenantUsecase) UpdateStatus(id string, req request.UpdateStatusTenantRequest) error {
+	tenant, err := u.tenantRepo.GetByID(id)
+
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("failed to get tenant")
+		return fmt.Errorf("something Went wrong %w", err)
+	}
+
+	tenant.IsActive = *req.IsActive
 
 	if err := u.tenantRepo.Update(tenant); err != nil {
 		log.WithFields(log.Fields{
