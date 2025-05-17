@@ -8,7 +8,7 @@ import (
 	"github.com/andrianprasetya/eventHub/internal/user/usecase"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
-	"strconv"
+	"net/http"
 )
 
 type UserHandler struct {
@@ -41,8 +41,12 @@ func (h *UserHandler) Create(c *fiber.Ctx) error {
 }
 
 func (h *UserHandler) GetAll(c *fiber.Ctx) error {
-	page, _ := strconv.Atoi(c.Query("page", "1"))
-	pageSize, _ := strconv.Atoi(c.Query("pageSize", "1"))
+	var query request.UserPaginateParams
+
+	if err := c.QueryParser(&query); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(http.StatusBadRequest, "invalid query parameters", err))
+	}
+
 	userAuth := c.Locals("user").(middleware.AuthUser)
 
 	var tenantID *string
@@ -50,11 +54,15 @@ func (h *UserHandler) GetAll(c *fiber.Ctx) error {
 		tenantID = &userAuth.Tenant.ID
 	}
 
-	users, total, err := h.userUC.GetAll(page, pageSize, tenantID)
+	users, total, err := h.userUC.GetAll(query, tenantID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
 	}
-	return c.Status(fiber.StatusOK).JSON(response.SuccessWithPaginateDataResponse(fiber.StatusOK, "Get Users Successfully", users, page, pageSize, total))
+	return c.Status(fiber.StatusOK).JSON(response.SuccessWithPaginateDataResponse(
+		fiber.StatusOK,
+		"Get Users Successfully",
+		users, query.Page,
+		query.PageSize, total))
 }
 
 func (h *UserHandler) GetByID(c *fiber.Ctx) error {

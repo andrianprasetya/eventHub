@@ -13,7 +13,7 @@ import (
 
 type SubscriptionPlanUsecase interface {
 	Create(req request.CreateSubscriptionPlanRequest) (*response.SubscriptionPlanResponse, error)
-	GetAll(page, pageSize int) ([]*response.SubscriptionPlanListItemResponse, int64, error)
+	GetAll(query request.SubscriptionPaginateParams) ([]*response.SubscriptionPlanListItemResponse, int64, error)
 	GetByID(id string) (*response.SubscriptionPlanResponse, error)
 	Update(id string, req request.UpdateSubscriptionPlanRequest) (*response.SubscriptionPlanResponse, error)
 	Delete(id string) error
@@ -47,8 +47,8 @@ func (u *subscriptionPlanUsecase) Create(req request.CreateSubscriptionPlanReque
 	return mapper.FromSubscriptionModel(subscriptionPlan), nil
 }
 
-func (u *subscriptionPlanUsecase) GetAll(page, pageSize int) ([]*response.SubscriptionPlanListItemResponse, int64, error) {
-	subscriptionPlan, total, err := u.subscriptionPlanRepo.GetAll(page, pageSize)
+func (u *subscriptionPlanUsecase) GetAll(query request.SubscriptionPaginateParams) ([]*response.SubscriptionPlanListItemResponse, int64, error) {
+	subscriptionPlan, total, err := u.subscriptionPlanRepo.GetAll(query)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,

@@ -1,12 +1,13 @@
 package repository
 
 import (
+	"github.com/andrianprasetya/eventHub/internal/user/dto/request"
 	"github.com/andrianprasetya/eventHub/internal/user/model"
 	"gorm.io/gorm"
 )
 
 type RoleRepository interface {
-	GetAll(page, pageSize int) ([]*model.Role, int64, error)
+	GetAll(query request.RolePaginateParams) ([]*model.Role, int64, error)
 	GetByID(id string) (*model.Role, error)
 	GetBySlug(slug string) (*model.Role, error)
 }
@@ -19,16 +20,21 @@ func NewRoleRepository(db *gorm.DB) RoleRepository {
 	return &roleRepository{DB: db}
 }
 
-func (r *roleRepository) GetAll(page, pageSize int) ([]*model.Role, int64, error) {
+func (r *roleRepository) GetAll(query request.RolePaginateParams) ([]*model.Role, int64, error) {
 	var roles []*model.Role
 	var total int64
-	if err := r.DB.Model(&model.Role{}).Count(&total).Error; err != nil {
+
+	db := r.DB.Model(&model.Role{})
+	if query.Name != nil {
+		db = db.Where("name ILIKE ?", "%"+*query.Name+"%")
+	}
+	if err := db.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	offset := (page - 1) * pageSize
+	offset := (query.Page - 1) * query.PageSize
 
-	if err := r.DB.Limit(pageSize).Offset(offset).Find(&roles).Error; err != nil {
+	if err := db.Limit(query.PageSize).Offset(offset).Find(&roles).Error; err != nil {
 		return nil, 0, err
 	}
 	return roles, total, nil

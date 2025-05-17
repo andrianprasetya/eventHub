@@ -1,10 +1,12 @@
 package handler
 
 import (
+	appErrors "github.com/andrianprasetya/eventHub/internal/shared/errors"
 	"github.com/andrianprasetya/eventHub/internal/shared/response"
+	"github.com/andrianprasetya/eventHub/internal/user/dto/request"
 	"github.com/andrianprasetya/eventHub/internal/user/usecase"
 	"github.com/gofiber/fiber/v2"
-	"strconv"
+	"net/http"
 )
 
 type RoleHandler struct {
@@ -16,20 +18,31 @@ func NewRoleHandler(roleUC usecase.RoleUsecase) *RoleHandler {
 }
 
 func (u *RoleHandler) GetAll(c *fiber.Ctx) error {
-	page, _ := strconv.Atoi(c.Query("page", "1"))
-	pageSize, _ := strconv.Atoi(c.Query("pageSize", "10"))
+	var query request.RolePaginateParams
 
-	roles, total, err := u.roleUC.GetAll(page, pageSize)
+	if err := c.QueryParser(&query); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(http.StatusBadRequest, "invalid query parameters", err))
+	}
+
+	roles, total, err := u.roleUC.GetAll(query)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
+		if appErr, ok := err.(*appErrors.AppError); ok {
+			message := appErr.Message
+			var errRes error
+			if appErr.ShouldExpose() {
+				errRes = appErr.Err
+			}
+			return c.Status(appErr.StatusCode()).JSON(response.ErrorResponse(appErr.StatusCode(), message, errRes))
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), nil))
 	}
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessWithPaginateDataResponse(
 		fiber.StatusOK,
 		"Get Role successfully",
 		roles,
-		page,
-		pageSize,
+		query.Page,
+		query.PageSize,
 		total,
 	))
 }

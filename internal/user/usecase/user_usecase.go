@@ -26,7 +26,7 @@ import (
 type UserUsecase interface {
 	Login(ctx context.Context, req request.LoginRequest, ip string) (*response.LoginResponse, error)
 	Create(req request.CreateUserRequest, auth *middleware.AuthUser, url string) error
-	GetAll(page, pageSize int, tenantID *string) ([]*response.UserListItemResponse, int64, error)
+	GetAll(query request.UserPaginateParams, tenantID *string) ([]*response.UserListItemResponse, int64, error)
 	GetByID(id string) (*response.UserResponse, error)
 	Update(req request.UpdateUserRequest, id string) error
 	Delete(id string) error
@@ -187,8 +187,8 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.Aut
 	return err
 }
 
-func (u *userUsecase) GetAll(page, pageSize int, tenantID *string) ([]*response.UserListItemResponse, int64, error) {
-	users, total, err := u.userRepo.GetAll(page, pageSize, tenantID)
+func (u *userUsecase) GetAll(query request.UserPaginateParams, tenantID *string) ([]*response.UserListItemResponse, int64, error) {
+	users, total, err := u.userRepo.GetAll(query, tenantID)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,

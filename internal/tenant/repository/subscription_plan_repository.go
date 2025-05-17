@@ -1,13 +1,14 @@
 package repository
 
 import (
+	"github.com/andrianprasetya/eventHub/internal/tenant/dto/request"
 	"github.com/andrianprasetya/eventHub/internal/tenant/model"
 	"gorm.io/gorm"
 )
 
 type SubscriptionPlanRepository interface {
 	Create(subscriptionPlan *model.SubscriptionPlan) error
-	GetAll(page, pageSize int) ([]*model.SubscriptionPlan, int64, error)
+	GetAll(query request.SubscriptionPaginateParams) ([]*model.SubscriptionPlan, int64, error)
 	GetByID(id string) (*model.SubscriptionPlan, error)
 	Update(subscriptionPlan *model.SubscriptionPlan) error
 	Delete(id string) error
@@ -25,16 +26,23 @@ func (r *subscriptionPlanRepository) Create(subscriptionPlan *model.Subscription
 	return r.DB.Create(subscriptionPlan).Error
 }
 
-func (r *subscriptionPlanRepository) GetAll(page, pageSize int) ([]*model.SubscriptionPlan, int64, error) {
+func (r *subscriptionPlanRepository) GetAll(query request.SubscriptionPaginateParams) ([]*model.SubscriptionPlan, int64, error) {
 	var subscriptionPlans []*model.SubscriptionPlan
 	var total int64
-	if err := r.DB.Model(&model.SubscriptionPlan{}).Count(&total).Error; err != nil {
+
+	db := r.DB.Model(&model.SubscriptionPlan{})
+
+	if query.Name != nil {
+		db = db.Where("name = ?", "%"+*query.Name+"%")
+	}
+
+	if err := db.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	offset := (page - 1) * pageSize
+	offset := (query.Page - 1) * query.PageSize
 
-	if err := r.DB.Limit(pageSize).Offset(offset).Find(&subscriptionPlans).Error; err != nil {
+	if err := db.Limit(query.PageSize).Offset(offset).Find(&subscriptionPlans).Error; err != nil {
 		return nil, 0, err
 	}
 	return subscriptionPlans, total, nil

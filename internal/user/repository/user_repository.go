@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"github.com/andrianprasetya/eventHub/internal/user/dto/request"
 	"github.com/andrianprasetya/eventHub/internal/user/model"
 	"gorm.io/gorm"
 )
@@ -10,7 +11,7 @@ type UserRepository interface {
 	CreateWithTx(tx *gorm.DB, user *model.User) error
 	GetByEmail(email string) (*model.User, error)
 	GetByID(id string) (*model.User, error)
-	GetAll(page, pageSize int, tenantID *string) ([]*model.User, int64, error)
+	GetAll(query request.UserPaginateParams, tenantID *string) ([]*model.User, int64, error)
 	Update(user *model.User) error
 	Delete(id string) error
 }
@@ -47,22 +48,19 @@ func (r *userRepository) GetByEmail(email string) (*model.User, error) {
 	return &user, nil
 }
 
-func (r *userRepository) GetAll(page, pageSize int, tenantID *string) ([]*model.User, int64, error) {
+func (r *userRepository) GetAll(query request.UserPaginateParams, tenantID *string) ([]*model.User, int64, error) {
 	var users []*model.User
 	var total int64
 
-	db := r.DB.Model(&model.User{})
-	if tenantID != nil {
-		db = db.Where("tenant_id = ?", tenantID)
-	}
+	db := r.DB.Model(&model.User{}).Scopes(FilterUserQuery(query, tenantID))
 
 	if err := db.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	offset := (page - 1) * pageSize
+	offset := (query.Page - 1) * query.PageSize
 
-	if err := db.Preload("Role").Limit(pageSize).Offset(offset).Find(&users).Error; err != nil {
+	if err := db.Preload("Role").Limit(query.PageSize).Offset(offset).Find(&users).Error; err != nil {
 		return nil, 0, err
 	}
 	return users, total, nil
@@ -82,4 +80,30 @@ func (r *userRepository) Update(user *model.User) error {
 
 func (r *userRepository) Delete(id string) error {
 	return r.DB.Where("id = ?", id).Delete(&model.User{}).Error
+}
+
+func FilterUserQuery(query request.UserPaginateParams, tenantID *string) func(*gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		//tenant params if super admin want filter the list
+		if query.TenantID != nil {
+			db = db.Where("tenant_id = ?", *query.TenantID)
+		}
+		if query.RoleID != nil {
+			db = db.Where("role_id = ?", *query.RoleID)
+		}
+		if query.Name != nil {
+			db = db.Where("name ILIKE ?", "%"+*query.Name+"%")
+		}
+		if query.Email != nil {
+			db = db.Where("email ILIKE ?", "%"+*query.Email+"%")
+		}
+		if query.IsActive != nil {
+			db = db.Where("is_active = ?", *query.IsActive)
+		}
+		//tenant id for filter if logged is tenant and select the users of self tenant
+		if tenantID != nil {
+			db = db.Where("tenant_id = ?", *tenantID)
+		}
+		return db
+	}
 }

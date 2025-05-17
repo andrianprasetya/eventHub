@@ -7,7 +7,7 @@ import (
 	"github.com/andrianprasetya/eventHub/internal/tenant/usecase"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
-	"strconv"
+	"net/http"
 )
 
 type SubscriptionPlanHandler struct {
@@ -19,10 +19,13 @@ func NewSubscriptionPlanHandler(subscriptionPlanUC usecase.SubscriptionPlanUseca
 }
 
 func (h *SubscriptionPlanHandler) GetAll(c *fiber.Ctx) error {
-	page, _ := strconv.Atoi(c.Query("page", "1"))
-	pageSize, _ := strconv.Atoi(c.Query("pageSize", "10"))
+	var query request.SubscriptionPaginateParams
 
-	subscriptionPlan, total, err := h.subscriptionPlanUC.GetAll(page, pageSize)
+	if err := c.QueryParser(&query); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(http.StatusBadRequest, "invalid query parameters", err))
+	}
+
+	subscriptionPlan, total, err := h.subscriptionPlanUC.GetAll(query)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
 	}
@@ -31,8 +34,8 @@ func (h *SubscriptionPlanHandler) GetAll(c *fiber.Ctx) error {
 		fiber.StatusOK,
 		"Get Subscription Plan successfully",
 		subscriptionPlan,
-		page,
-		pageSize,
+		query.Page,
+		query.PageSize,
 		total,
 	))
 }
