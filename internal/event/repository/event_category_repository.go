@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"github.com/andrianprasetya/eventHub/internal/event/dto/request"
 	"github.com/andrianprasetya/eventHub/internal/event/model"
 	"gorm.io/gorm"
 )
@@ -9,7 +10,7 @@ type EventCategoryRepository interface {
 	Create(eventCategory *model.EventCategory) error
 	CreateBulkWithTx(tx *gorm.DB, eventCategories *[]model.EventCategory) error
 	AddCategoryToEventWithTx(tx *gorm.DB, id string, event *model.Event) error
-	GetAll(page, pageSize int, tenantID *string) ([]*model.EventCategory, int64, error)
+	GetAll(query request.EventCategoryPaginateRequest, tenantID *string) ([]*model.EventCategory, int64, error)
 }
 
 type eventCategoryRepository struct {
@@ -28,10 +29,14 @@ func (r *eventCategoryRepository) CreateBulkWithTx(tx *gorm.DB, eventCategories 
 	return r.DB.Create(eventCategories).Error
 }
 
-func (r *eventCategoryRepository) GetAll(page, pageSize int, tenantID *string) ([]*model.EventCategory, int64, error) {
+func (r *eventCategoryRepository) GetAll(query request.EventCategoryPaginateRequest, tenantID *string) ([]*model.EventCategory, int64, error) {
 	var eventCategories []*model.EventCategory
 	var total int64
 	db := r.DB.Model(&model.EventCategory{})
+
+	if query.Name != nil {
+		db = db.Where("name ILIKE ?", "%"+*query.Name+"%")
+	}
 
 	if tenantID != nil {
 		db = db.Where("tenant_id = ?", tenantID)
@@ -39,13 +44,13 @@ func (r *eventCategoryRepository) GetAll(page, pageSize int, tenantID *string) (
 	if err := db.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
-	offset := (page - 1) * pageSize
-	if err := db.Limit(pageSize).Offset(offset).Find(&eventCategories).Error; err != nil {
+	offset := (query.Page - 1) * query.PageSize
+	if err := db.Limit(query.PageSize).Offset(offset).Find(&eventCategories).Error; err != nil {
 		return nil, 0, err
 	}
 	return eventCategories, total, nil
 }
 
 func (r *eventCategoryRepository) AddCategoryToEventWithTx(tx *gorm.DB, id string, event *model.Event) error {
-	return r.DB.Preload("Category").First(event, "id = ?", id).Error
+	return tx.Preload("Category").First(event, "id = ?", id).Error
 }

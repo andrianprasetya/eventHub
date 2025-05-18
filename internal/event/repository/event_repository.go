@@ -1,13 +1,14 @@
 package repository
 
 import (
+	"github.com/andrianprasetya/eventHub/internal/event/dto/request"
 	"github.com/andrianprasetya/eventHub/internal/event/model"
 	"gorm.io/gorm"
 )
 
 type EventRepository interface {
 	Create(tx *gorm.DB, event *model.Event) error
-	GetAll(page, pageSize int, tenantID *string) ([]*model.Event, int64, error)
+	GetAll(query request.EventPaginateRequest, tenantID *string) ([]*model.Event, int64, error)
 	GetByID(id string) (*model.Event, error)
 }
 
@@ -23,12 +24,15 @@ func (r *eventRepository) Create(tx *gorm.DB, event *model.Event) error {
 	return tx.Create(event).Error
 }
 
-func (r *eventRepository) GetAll(page, pageSize int, tenantID *string) ([]*model.Event, int64, error) {
+func (r *eventRepository) GetAll(query request.EventPaginateRequest, tenantID *string) ([]*model.Event, int64, error) {
 	var events []*model.Event
 	var total int64
 
 	db := r.DB.Model(&model.Event{})
 
+	if query.Name != nil {
+		db = db.Where("name ILIKE ?", "%"+*query.Name+"%")
+	}
 	if tenantID != nil {
 		db = db.Where("tenant_id = ?", tenantID)
 	}
@@ -37,9 +41,9 @@ func (r *eventRepository) GetAll(page, pageSize int, tenantID *string) ([]*model
 		return nil, 0, err
 	}
 
-	offset := (page - 1) * pageSize
+	offset := (query.Page - 1) * query.PageSize
 
-	if err := r.DB.Limit(pageSize).Offset(offset).Find(&events).Error; err != nil {
+	if err := r.DB.Limit(query.PageSize).Offset(offset).Find(&events).Error; err != nil {
 		return nil, 0, err
 	}
 	return events, total, nil

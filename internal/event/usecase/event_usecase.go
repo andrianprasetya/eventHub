@@ -21,9 +21,9 @@ import (
 
 type EventUsecase interface {
 	Create(req request.CreateEventRequest, auth middleware.AuthUser, url string) (*response.EventResponse, error)
-	GetTags(page, pageSize int, tenantID *string) ([]*response.EventTagListItemResponse, int64, error)
-	GetCategories(page, pageSize int, tenantID *string) ([]*response.EventCategoryListItemResponse, int64, error)
-	GetAll(page, pageSize int, tenantID *string) ([]*response.EventListItemResponse, int64, error)
+	GetTags(query request.EventTagPaginateRequest, tenantID *string) ([]*response.EventTagListItemResponse, int64, error)
+	GetCategories(query request.EventCategoryPaginateRequest, tenantID *string) ([]*response.EventCategoryListItemResponse, int64, error)
+	GetAll(query request.EventPaginateRequest, tenantID *string) ([]*response.EventListItemResponse, int64, error)
 	GetByID(id string) (*response.EventResponse, error)
 }
 
@@ -178,8 +178,8 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 	return mapper.FromEventModel(event), err
 }
 
-func (u *eventUsecase) GetTags(page, pageSize int, tenantID *string) ([]*response.EventTagListItemResponse, int64, error) {
-	eventTags, total, err := u.eventTagRepo.GetAll(page, pageSize, tenantID)
+func (u *eventUsecase) GetTags(query request.EventTagPaginateRequest, tenantID *string) ([]*response.EventTagListItemResponse, int64, error) {
+	eventTags, total, err := u.eventTagRepo.GetAll(query, tenantID)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,
@@ -189,8 +189,8 @@ func (u *eventUsecase) GetTags(page, pageSize int, tenantID *string) ([]*respons
 
 	return mapper.FromEventTagToList(eventTags), total, err
 }
-func (u *eventUsecase) GetCategories(page, pageSize int, tenantID *string) ([]*response.EventCategoryListItemResponse, int64, error) {
-	eventCategories, total, err := u.eventCategoryRepo.GetAll(page, pageSize, tenantID)
+func (u *eventUsecase) GetCategories(query request.EventCategoryPaginateRequest, tenantID *string) ([]*response.EventCategoryListItemResponse, int64, error) {
+	eventCategories, total, err := u.eventCategoryRepo.GetAll(query, tenantID)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,
@@ -201,8 +201,8 @@ func (u *eventUsecase) GetCategories(page, pageSize int, tenantID *string) ([]*r
 	return mapper.FromEventCategoryToList(eventCategories), total, err
 }
 
-func (u *eventUsecase) GetAll(page, pageSize int, tenantID *string) ([]*response.EventListItemResponse, int64, error) {
-	events, total, err := u.eventRepo.GetAll(page, pageSize, tenantID)
+func (u *eventUsecase) GetAll(query request.EventPaginateRequest, tenantID *string) ([]*response.EventListItemResponse, int64, error) {
+	events, total, err := u.eventRepo.GetAll(query, tenantID)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,

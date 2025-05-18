@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"github.com/andrianprasetya/eventHub/internal/event/dto/request"
 	"github.com/andrianprasetya/eventHub/internal/event/model"
 	"gorm.io/gorm"
 )
@@ -8,7 +9,7 @@ import (
 type EventTagRepository interface {
 	Create(eventTag *model.EventTag) error
 	CreateBulkWithTx(tx *gorm.DB, eventTags *[]model.EventTag) error
-	GetAll(page, pageSize int, tenantID *string) ([]*model.EventTag, int64, error)
+	GetAll(query request.EventTagPaginateRequest, tenantID *string) ([]*model.EventTag, int64, error)
 }
 
 type eventTagRepository struct {
@@ -27,12 +28,15 @@ func (r *eventTagRepository) CreateBulkWithTx(tx *gorm.DB, eventTags *[]model.Ev
 	return r.DB.Create(eventTags).Error
 }
 
-func (r *eventTagRepository) GetAll(page, pageSize int, tenantID *string) ([]*model.EventTag, int64, error) {
+func (r *eventTagRepository) GetAll(query request.EventTagPaginateRequest, tenantID *string) ([]*model.EventTag, int64, error) {
 	var eventTags []*model.EventTag
 	var total int64
 
 	db := r.DB.Model(&model.EventTag{})
 
+	if query.Name != nil {
+		db = db.Where("name ILIKE ?", "%"+*query.Name+"%")
+	}
 	if tenantID != nil {
 		db = db.Where("tenant_id = ?", tenantID)
 	}
@@ -40,9 +44,9 @@ func (r *eventTagRepository) GetAll(page, pageSize int, tenantID *string) ([]*mo
 	if err := db.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
-	offset := (page - 1) * pageSize
+	offset := (query.Page - 1) * query.PageSize
 
-	if err := db.Limit(pageSize).Offset(offset).Find(&eventTags).Error; err != nil {
+	if err := db.Limit(query.PageSize).Offset(offset).Find(&eventTags).Error; err != nil {
 		return nil, 0, err
 	}
 	return eventTags, total, nil

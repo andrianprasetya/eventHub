@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func nullFloatValidator(field reflect.Value) interface{} {
@@ -38,6 +39,17 @@ func nullTimeValidator(field reflect.Value) interface{} {
 		}
 	}
 	return nil
+}
+
+func validateNotPast(fl validator.FieldLevel) bool {
+	startDate, ok := fl.Field().Interface().(time.Time)
+	if !ok {
+		return false
+	}
+	// Ambil tanggal tanpa jam (format YYYY-MM-DD)
+	start := startDate.Format("2006-01-02")
+	today := time.Now().Format("2006-01-02")
+	return start >= today
 }
 
 func validateDateOnly(fl validator.FieldLevel) bool {
@@ -175,6 +187,14 @@ func requireCheckFieldKind(fl validator.FieldLevel, param string) bool {
 		}
 		return field.IsValid() && field.Interface() != reflect.Zero(field.Type()).Interface()
 	}
+}
+
+func validateIsArray(fl validator.FieldLevel) bool {
+	field := fl.Field()
+	if field.Kind() != reflect.Slice && field.Kind() != reflect.Array {
+		return false
+	}
+	return field.Len() > 0 // hanya valid jika array tidak kosong
 }
 
 func isEq(field reflect.Value, value string) bool {

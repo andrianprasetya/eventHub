@@ -9,10 +9,10 @@ type CreateEventRequest struct {
 	Title       string             `json:"title" validate:"required"`
 	Description *string            `json:"description"`
 	Location    string             `json:"location" validate:"required"`
-	StartDate   time.Time          `json:"start_date" validate:"required"`
+	StartDate   time.Time          `json:"start_date" validate:"required,not_past_date"`
 	EndDate     time.Time          `json:"end_date" validate:"required"`
 	CategoryID  string             `json:"category_id" validate:"required"`
-	Tags        *utils.StringArray `json:"tags" validate:"omitempty,dive,required"`
+	Tags        *utils.StringArray `json:"tags" validate:"is_array,required"`
 	Status      string             `json:"status" validate:"required"`
 	Tickets     []EventTicket      `json:"tickets" validate:"omitempty,dive"`
 	Sessions    []EventSession     `json:"sessions" validate:"omitempty,dive"`
@@ -36,4 +36,16 @@ type EventDiscount struct {
 	DiscountPercentage int       `json:"discount_percentage"`
 	StartDate          time.Time `json:"start_date"`
 	EndDate            time.Time `json:"end_date"`
+}
+
+type EventPaginateRequest struct {
+	Page     int     `query:"page"`
+	PageSize int     `query:"pageSize"`
+	Name     *string `json:"name"`
+}
+
+type EventTagPaginateRequest struct {
+	Page     int     `query:"page"`
+	PageSize int     `query:"pageSize"`
+	Name     *string `json:"name"`
 }

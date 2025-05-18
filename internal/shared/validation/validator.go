@@ -18,6 +18,14 @@ func NewValidator() *Validator {
 		validator: validator.New(),
 	}
 
+	if err := v.validator.RegisterValidation("is_array", validateIsArray); err != nil {
+		log.Error("failed register validation is_array")
+	}
+
+	if err := v.validator.RegisterValidation("not_past_date", validateNotPast); err != nil {
+		log.Error("failed register validation not_past")
+	}
+
 	if err := v.validator.RegisterValidation("date_only", validateDateOnly); err != nil {
 		log.Error("failed register validation date_only")
 	}
@@ -72,6 +80,10 @@ func MapValidationErrorsToJSONTags(req interface{}, errs validator.ValidationErr
 					errorMessages[jsonTag] = fmt.Sprintf("%s must be at most %s characters", jsonTag, e.Param())
 				case "unique":
 					errorMessages[jsonTag] = fmt.Sprintf("%s must be unique", jsonTag)
+				case "not_past_date":
+					errorMessages[jsonTag] = fmt.Sprintf("%s must not below date now", jsonTag)
+				case "is_array":
+					errorMessages[jsonTag] = fmt.Sprintf("%s must an array", jsonTag)
 				default:
 					errorMessages[jsonTag] = fmt.Sprintf("%s is invalid", jsonTag)
 				}

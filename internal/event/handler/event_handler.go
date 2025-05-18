@@ -9,7 +9,7 @@ import (
 	"github.com/andrianprasetya/eventHub/internal/shared/validation"
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
-	"strconv"
+	"net/http"
 )
 
 type EventHandler struct {
@@ -21,29 +21,33 @@ func NewEventHandler(eventUC usecase.EventUsecase) *EventHandler {
 }
 
 func (h *EventHandler) GetTags(c *fiber.Ctx) error {
-	page, _ := strconv.Atoi(c.Query("page", "1"))
-	pageSize, _ := strconv.Atoi(c.Query("pageSize", "10"))
-	userAuth := c.Locals("user").(*middleware.AuthUser)
+	var query request.EventTagPaginateRequest
+	if err := c.QueryParser(&query); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(http.StatusBadRequest, "invalid query parameters", err))
+	}
+	userAuth := c.Locals("user").(middleware.AuthUser)
 
-	eventTags, total, err := h.eventUC.GetTags(page, pageSize, &userAuth.Tenant.ID)
+	eventTags, total, err := h.eventUC.GetTags(query, &userAuth.Tenant.ID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
 	}
 
-	return c.Status(fiber.StatusOK).JSON(response.SuccessWithPaginateDataResponse(fiber.StatusOK, "Get Event Tags successfully", eventTags, page, pageSize, total))
+	return c.Status(fiber.StatusOK).JSON(response.SuccessWithPaginateDataResponse(fiber.StatusOK, "Get Event Tags successfully", eventTags, query.Page, query.PageSize, total))
 }
 
 func (h *EventHandler) GetCategories(c *fiber.Ctx) error {
-	page, _ := strconv.Atoi(c.Query("page", "1"))
-	pageSize, _ := strconv.Atoi(c.Query("pageSize", "10"))
-	userAuth := c.Locals("user").(*middleware.AuthUser)
+	var query request.EventCategoryPaginateRequest
+	if err := c.QueryParser(&query); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(http.StatusBadRequest, "invalid query parameters", err))
+	}
+	userAuth := c.Locals("user").(middleware.AuthUser)
 
-	eventCategories, total, err := h.eventUC.GetCategories(page, pageSize, &userAuth.Tenant.ID)
+	eventCategories, total, err := h.eventUC.GetCategories(query, &userAuth.Tenant.ID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
 	}
 
-	return c.Status(fiber.StatusOK).JSON(response.SuccessWithPaginateDataResponse(fiber.StatusOK, "Get Event Categories successfully", eventCategories, page, pageSize, total))
+	return c.Status(fiber.StatusOK).JSON(response.SuccessWithPaginateDataResponse(fiber.StatusOK, "Get Event Categories successfully", eventCategories, query.Page, query.PageSize, total))
 }
 
 func (h *EventHandler) Create(c *fiber.Ctx) error {
@@ -60,6 +64,10 @@ func (h *EventHandler) Create(c *fiber.Ctx) error {
 	if errValidation := validation.NewValidator().Validate(&req); errValidation != nil {
 		errs := errValidation.(validator.ValidationErrors)
 		errorMessages := validation.MapValidationErrorsToJSONTags(req, errs)
+
+		if req.EndDate.Before(req.StartDate) {
+			errorMessages["end_date"] = "end_date must not below start_date"
+		}
 		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationResponse(fiber.StatusBadRequest, errorMessages))
 	}
 	event, err := h.eventUC.Create(req, userAuth, url)
@@ -78,11 +86,13 @@ func (h *EventHandler) Create(c *fiber.Ctx) error {
 }
 
 func (h *EventHandler) GetAll(c *fiber.Ctx) error {
-	page, _ := strconv.Atoi(c.Query("page", "1"))
-	pageSize, _ := strconv.Atoi(c.Query("pageSize", "10"))
-	userAuth := c.Locals("user").(*middleware.AuthUser)
+	var query request.EventPaginateRequest
+	if err := c.QueryParser(&query); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(http.StatusBadRequest, "invalid query parameters", err))
+	}
+	userAuth := c.Locals("user").(middleware.AuthUser)
 
-	events, total, err := h.eventUC.GetAll(page, pageSize, &userAuth.Tenant.ID)
+	events, total, err := h.eventUC.GetAll(query, &userAuth.Tenant.ID)
 	if err != nil {
 		if appErr, ok := err.(*appErrors.AppError); ok {
 			message := appErr.Message
@@ -94,7 +104,7 @@ func (h *EventHandler) GetAll(c *fiber.Ctx) error {
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), nil))
 	}
-	return c.Status(fiber.StatusOK).JSON(response.SuccessWithPaginateDataResponse(fiber.StatusOK, "Get Event Successfully", events, page, pageSize, total))
+	return c.Status(fiber.StatusOK).JSON(response.SuccessWithPaginateDataResponse(fiber.StatusOK, "Get Event Successfully", events, query.Page, query.PageSize, total))
 }
 
 func (h *EventHandler) GetByID(c *fiber.Ctx) error {
