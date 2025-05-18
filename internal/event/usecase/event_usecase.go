@@ -21,9 +21,9 @@ import (
 
 type EventUsecase interface {
 	Create(req request.CreateEventRequest, auth middleware.AuthUser, url string) (*response.EventResponse, error)
-	GetTags(page, pageSize int) ([]*response.EventTagListItemResponse, int64, error)
-	GetCategories(page, pageSize int) ([]*response.EventCategoryListItemResponse, int64, error)
-	GetAll(page, pageSize int) ([]*response.EventListItemResponse, int64, error)
+	GetTags(page, pageSize int, tenantID *string) ([]*response.EventTagListItemResponse, int64, error)
+	GetCategories(page, pageSize int, tenantID *string) ([]*response.EventCategoryListItemResponse, int64, error)
+	GetAll(page, pageSize int, tenantID *string) ([]*response.EventListItemResponse, int64, error)
 	GetByID(id string) (*response.EventResponse, error)
 }
 
@@ -178,8 +178,8 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 	return mapper.FromEventModel(event), err
 }
 
-func (u *eventUsecase) GetTags(page, pageSize int) ([]*response.EventTagListItemResponse, int64, error) {
-	eventTags, total, err := u.eventTagRepo.GetAll(page, pageSize)
+func (u *eventUsecase) GetTags(page, pageSize int, tenantID *string) ([]*response.EventTagListItemResponse, int64, error) {
+	eventTags, total, err := u.eventTagRepo.GetAll(page, pageSize, tenantID)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,
@@ -189,8 +189,8 @@ func (u *eventUsecase) GetTags(page, pageSize int) ([]*response.EventTagListItem
 
 	return mapper.FromEventTagToList(eventTags), total, err
 }
-func (u *eventUsecase) GetCategories(page, pageSize int) ([]*response.EventCategoryListItemResponse, int64, error) {
-	eventCategories, total, err := u.eventCategoryRepo.GetAll(page, pageSize)
+func (u *eventUsecase) GetCategories(page, pageSize int, tenantID *string) ([]*response.EventCategoryListItemResponse, int64, error) {
+	eventCategories, total, err := u.eventCategoryRepo.GetAll(page, pageSize, tenantID)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,
@@ -201,8 +201,8 @@ func (u *eventUsecase) GetCategories(page, pageSize int) ([]*response.EventCateg
 	return mapper.FromEventCategoryToList(eventCategories), total, err
 }
 
-func (u *eventUsecase) GetAll(page, pageSize int) ([]*response.EventListItemResponse, int64, error) {
-	events, total, err := u.eventRepo.GetAll(page, pageSize)
+func (u *eventUsecase) GetAll(page, pageSize int, tenantID *string) ([]*response.EventListItemResponse, int64, error) {
+	events, total, err := u.eventRepo.GetAll(page, pageSize, tenantID)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,

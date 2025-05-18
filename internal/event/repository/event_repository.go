@@ -7,7 +7,7 @@ import (
 
 type EventRepository interface {
 	Create(tx *gorm.DB, event *model.Event) error
-	GetAll(page, pageSize int) ([]*model.Event, int64, error)
+	GetAll(page, pageSize int, tenantID *string) ([]*model.Event, int64, error)
 	GetByID(id string) (*model.Event, error)
 }
 
@@ -23,10 +23,17 @@ func (r *eventRepository) Create(tx *gorm.DB, event *model.Event) error {
 	return tx.Create(event).Error
 }
 
-func (r *eventRepository) GetAll(page, pageSize int) ([]*model.Event, int64, error) {
+func (r *eventRepository) GetAll(page, pageSize int, tenantID *string) ([]*model.Event, int64, error) {
 	var events []*model.Event
 	var total int64
-	if err := r.DB.Model(&model.Event{}).Count(&total).Error; err != nil {
+
+	db := r.DB.Model(&model.Event{})
+
+	if tenantID != nil {
+		db = db.Where("tenant_id = ?", tenantID)
+	}
+
+	if err := db.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 

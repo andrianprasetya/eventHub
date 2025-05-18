@@ -2,6 +2,7 @@ package usecase
 
 import (
 	appErrors "github.com/andrianprasetya/eventHub/internal/shared/errors"
+	"github.com/andrianprasetya/eventHub/internal/shared/middleware"
 	"github.com/andrianprasetya/eventHub/internal/user/dto/mapper"
 	"github.com/andrianprasetya/eventHub/internal/user/dto/request"
 	"github.com/andrianprasetya/eventHub/internal/user/dto/response"
@@ -10,7 +11,7 @@ import (
 )
 
 type RoleUsecase interface {
-	GetAll(query request.RolePaginateParams) ([]*response.RoleListItemResponse, int64, error)
+	GetAll(query request.RolePaginateParams, userAuth middleware.AuthUser) ([]*response.RoleListItemResponse, int64, error)
 	GetByID(id string) (*response.RoleResponse, error)
 }
 
@@ -22,8 +23,8 @@ func NewRoleUsecase(roleRepo repository.RoleRepository) RoleUsecase {
 	return &roleUsecase{roleRepo: roleRepo}
 }
 
-func (r *roleUsecase) GetAll(query request.RolePaginateParams) ([]*response.RoleListItemResponse, int64, error) {
-	roles, total, err := r.roleRepo.GetAll(query)
+func (r *roleUsecase) GetAll(query request.RolePaginateParams, userAuth middleware.AuthUser) ([]*response.RoleListItemResponse, int64, error) {
+	roles, total, err := r.roleRepo.GetAll(query, userAuth.Role.Slug)
 
 	if err != nil {
 		log.WithFields(log.Fields{

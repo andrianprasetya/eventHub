@@ -23,7 +23,9 @@ func NewEventHandler(eventUC usecase.EventUsecase) *EventHandler {
 func (h *EventHandler) GetTags(c *fiber.Ctx) error {
 	page, _ := strconv.Atoi(c.Query("page", "1"))
 	pageSize, _ := strconv.Atoi(c.Query("pageSize", "10"))
-	eventTags, total, err := h.eventUC.GetTags(page, pageSize)
+	userAuth := c.Locals("user").(*middleware.AuthUser)
+
+	eventTags, total, err := h.eventUC.GetTags(page, pageSize, &userAuth.Tenant.ID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
 	}
@@ -34,8 +36,9 @@ func (h *EventHandler) GetTags(c *fiber.Ctx) error {
 func (h *EventHandler) GetCategories(c *fiber.Ctx) error {
 	page, _ := strconv.Atoi(c.Query("page", "1"))
 	pageSize, _ := strconv.Atoi(c.Query("pageSize", "10"))
+	userAuth := c.Locals("user").(*middleware.AuthUser)
 
-	eventCategories, total, err := h.eventUC.GetCategories(page, pageSize)
+	eventCategories, total, err := h.eventUC.GetCategories(page, pageSize, &userAuth.Tenant.ID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
 	}
@@ -77,8 +80,9 @@ func (h *EventHandler) Create(c *fiber.Ctx) error {
 func (h *EventHandler) GetAll(c *fiber.Ctx) error {
 	page, _ := strconv.Atoi(c.Query("page", "1"))
 	pageSize, _ := strconv.Atoi(c.Query("pageSize", "10"))
+	userAuth := c.Locals("user").(*middleware.AuthUser)
 
-	events, total, err := h.eventUC.GetAll(page, pageSize)
+	events, total, err := h.eventUC.GetAll(page, pageSize, &userAuth.Tenant.ID)
 	if err != nil {
 		if appErr, ok := err.(*appErrors.AppError); ok {
 			message := appErr.Message

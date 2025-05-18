@@ -7,7 +7,7 @@ import (
 )
 
 type RoleRepository interface {
-	GetAll(query request.RolePaginateParams) ([]*model.Role, int64, error)
+	GetAll(query request.RolePaginateParams, role string) ([]*model.Role, int64, error)
 	GetByID(id string) (*model.Role, error)
 	GetBySlug(slug string) (*model.Role, error)
 }
@@ -20,11 +20,15 @@ func NewRoleRepository(db *gorm.DB) RoleRepository {
 	return &roleRepository{DB: db}
 }
 
-func (r *roleRepository) GetAll(query request.RolePaginateParams) ([]*model.Role, int64, error) {
+func (r *roleRepository) GetAll(query request.RolePaginateParams, role string) ([]*model.Role, int64, error) {
 	var roles []*model.Role
 	var total int64
 
 	db := r.DB.Model(&model.Role{})
+	if role != "super-admin" {
+		db = db.Not("slug = ?", "super-admin").Not("slug = ?", "tenant-admin")
+	}
+
 	if query.Name != nil {
 		db = db.Where("name ILIKE ?", "%"+*query.Name+"%")
 	}

@@ -54,8 +54,8 @@ func SetupRoutes(c *fiber.App,
 	user.Delete("/delete/:id", middleware.RequireRole("tenant-admin"), userHandler.Delete)
 
 	//role
-	role.Get("/get-all", roleHandler.GetAll)
-	role.Get("/get/:id", roleHandler.GetByID)
+	role.Get("/get-all", middleware.RequireRole("tenant-admin", "super-admin"), roleHandler.GetAll)
+	role.Get("/get/:id", middleware.RequireRole("tenant-admin", "super-admin"), roleHandler.GetByID)
 
 	//tenant
 	tenant.Post("/update-information/:id", middleware.RequireRole("tenant-admin"), tenantHandler.UpdateInformation)

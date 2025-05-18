@@ -2,6 +2,7 @@ package handler
 
 import (
 	appErrors "github.com/andrianprasetya/eventHub/internal/shared/errors"
+	"github.com/andrianprasetya/eventHub/internal/shared/middleware"
 	"github.com/andrianprasetya/eventHub/internal/shared/response"
 	"github.com/andrianprasetya/eventHub/internal/user/dto/request"
 	"github.com/andrianprasetya/eventHub/internal/user/usecase"
@@ -24,7 +25,8 @@ func (u *RoleHandler) GetAll(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(http.StatusBadRequest, "invalid query parameters", err))
 	}
 
-	roles, total, err := u.roleUC.GetAll(query)
+	userAuth := c.Locals("user").(middleware.AuthUser)
+	roles, total, err := u.roleUC.GetAll(query, userAuth)
 	if err != nil {
 		if appErr, ok := err.(*appErrors.AppError); ok {
 			message := appErr.Message

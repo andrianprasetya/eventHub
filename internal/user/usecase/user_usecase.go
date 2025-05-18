@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	logRepository "github.com/andrianprasetya/eventHub/internal/audit_security_log/repository"
 	appErrors "github.com/andrianprasetya/eventHub/internal/shared/errors"
@@ -17,6 +18,7 @@ import (
 	modelUser "github.com/andrianprasetya/eventHub/internal/user/model"
 	"github.com/andrianprasetya/eventHub/internal/user/repository"
 	appServer "github.com/andrianprasetya/eventHub/server"
+	"github.com/redis/go-redis/v9"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
@@ -70,6 +72,37 @@ func (u *userUsecase) Login(ctx context.Context, req request.LoginRequest, ip st
 		}).Error("failed to get Email")
 		return nil, appErrors.ErrInternalServer
 	}
+	getRedisToken, err := appServer.RedisClient.Get(ctx, "user:jwt:"+getUser.ID)
+
+	if getRedisToken != "" {
+		var authUser middleware.AuthUser
+		if err := json.Unmarshal([]byte(getRedisToken), &authUser); err != nil {
+			log.WithFields(log.Fields{
+				"errors": err,
+			}).Error("failed to mapping payload")
+			return nil, appErrors.ErrInternalServer
+		}
+		return &response.LoginResponse{
+			AccessToken:  authUser.Token,
+			Exp:          10 * 60,
+			TokenType:    "Bearer",
+			Username:     req.Email,
+			TenantDomain: getUser.Tenant.Domain,
+		}, nil
+	}
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			// Key not found inside redis (don't make it considered fatal)
+			log.Info("Token not found in Redis (might be new login)")
+			getRedisToken = "" // kosongkan jika perlu
+		} else {
+			// Ini error Redis yang lain, misalnya koneksi putus, dsb
+			log.WithFields(log.Fields{
+				"errors": err,
+			}).Error("failed to get token from Redis")
+			return nil, appErrors.ErrInternalServer
+		}
+	}
 
 	if errMatching := bcrypt.CompareHashAndPassword([]byte(getUser.Password), []byte(req.Password)); errMatching != nil {
 		log.WithFields(log.Fields{
@@ -78,7 +111,7 @@ func (u *userUsecase) Login(ctx context.Context, req request.LoginRequest, ip st
 		return nil, appErrors.ErrInvalidCredentials
 	}
 
-	token, err := utils.GenerateJWT(req.Email)
+	token, err := utils.GenerateJWT(getUser.ID, req.Email)
 
 	payload := &middleware.AuthUser{
 		ID:    getUser.ID,
@@ -102,7 +135,7 @@ func (u *userUsecase) Login(ctx context.Context, req request.LoginRequest, ip st
 		Token:    token,
 	}
 	data, _ := json.Marshal(payload)
-	key := "user:jwt:" + token
+	key := "user:jwt:" + getUser.ID
 	if err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,

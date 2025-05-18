@@ -9,7 +9,7 @@ type EventCategoryRepository interface {
 	Create(eventCategory *model.EventCategory) error
 	CreateBulkWithTx(tx *gorm.DB, eventCategories *[]model.EventCategory) error
 	AddCategoryToEventWithTx(tx *gorm.DB, id string, event *model.Event) error
-	GetAll(page, pageSize int) ([]*model.EventCategory, int64, error)
+	GetAll(page, pageSize int, tenantID *string) ([]*model.EventCategory, int64, error)
 }
 
 type eventCategoryRepository struct {
@@ -28,15 +28,19 @@ func (r *eventCategoryRepository) CreateBulkWithTx(tx *gorm.DB, eventCategories 
 	return r.DB.Create(eventCategories).Error
 }
 
-func (r *eventCategoryRepository) GetAll(page, pageSize int) ([]*model.EventCategory, int64, error) {
+func (r *eventCategoryRepository) GetAll(page, pageSize int, tenantID *string) ([]*model.EventCategory, int64, error) {
 	var eventCategories []*model.EventCategory
 	var total int64
+	db := r.DB.Model(&model.EventCategory{})
 
-	if err := r.DB.Model(&model.EventCategory{}).Count(&total).Error; err != nil {
+	if tenantID != nil {
+		db = db.Where("tenant_id = ?", tenantID)
+	}
+	if err := db.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 	offset := (page - 1) * pageSize
-	if err := r.DB.Limit(pageSize).Offset(offset).Find(&eventCategories).Error; err != nil {
+	if err := db.Limit(pageSize).Offset(offset).Find(&eventCategories).Error; err != nil {
 		return nil, 0, err
 	}
 	return eventCategories, total, nil
