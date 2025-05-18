@@ -140,7 +140,7 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.Aut
 		return appErrors.ErrInternalServer
 	}
 
-	role, err := u.roleRepo.GetByID("organizer")
+	role, err := u.roleRepo.GetBySlug("organizer")
 
 	if err != nil {
 		log.WithFields(log.Fields{
