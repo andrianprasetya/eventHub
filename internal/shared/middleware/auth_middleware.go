@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"github.com/andrianprasetya/eventHub/internal/shared/redisser"
 	"github.com/andrianprasetya/eventHub/internal/shared/response"
+	"github.com/andrianprasetya/eventHub/internal/shared/utils"
 	"github.com/gofiber/fiber/v2"
+	log "github.com/sirupsen/logrus"
 	"strings"
 )
 
@@ -44,9 +46,19 @@ func AuthMiddleware(redis redisser.RedisClient) fiber.Handler {
 
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 
+		claims, err := utils.DecodeJWT(tokenString)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"errors": err,
+			}).Error("failed to decoded token")
+			return c.Status(fiber.StatusUnauthorized).JSON(response.ErrorResponse(fiber.StatusInternalServerError, "Internal Server Error", err))
+		}
+
+		userID := claims["user_id"].(string)
+
 		// Check token in Redis
 		ctx := context.Background()
-		data, err := redis.Get(ctx, "user:jwt:"+tokenString)
+		data, err := redis.Get(ctx, "user:jwt:"+userID)
 		if err != nil {
 			return c.Status(fiber.StatusUnauthorized).JSON(response.ErrorResponse(fiber.StatusUnauthorized, "Token expired or invalid", err))
 		}
