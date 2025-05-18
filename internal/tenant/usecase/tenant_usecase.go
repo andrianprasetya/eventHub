@@ -3,6 +3,7 @@ package usecase
 import (
 	"fmt"
 	eventRepository "github.com/andrianprasetya/eventHub/internal/event/repository"
+	appErrors "github.com/andrianprasetya/eventHub/internal/shared/errors"
 	repositoryShared "github.com/andrianprasetya/eventHub/internal/shared/repository"
 	"github.com/andrianprasetya/eventHub/internal/shared/service"
 	"github.com/andrianprasetya/eventHub/internal/shared/utils"
@@ -71,7 +72,7 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 			log.WithFields(log.Fields{
 				"errors": r,
 			}).Error("Failed to create tenant  (panic recovered)")
-			err = fmt.Errorf("something went wrong %w", r)
+			err = appErrors.ErrInternalServer
 		} else if err != nil {
 			tx.Rollback()
 		}
@@ -79,7 +80,7 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return err
+		return appErrors.ErrInternalServer
 	}
 
 	tenant := &modelTenant.Tenant{
@@ -106,7 +107,7 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 		log.WithFields(log.Fields{
 			"errors": resPlan.Err,
 		}).Error("failed to get subscription plan")
-		return fmt.Errorf("something Went wrong %w", resPlan.Err)
+		return appErrors.ErrInternalServer
 	}
 
 	resRole := <-roleCh
@@ -114,14 +115,14 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 		log.WithFields(log.Fields{
 			"errors": resRole.Err,
 		}).Error("failed to get role")
-		return fmt.Errorf("something Went wrong")
+		return appErrors.ErrInternalServer
 	}
 
 	if err = u.tenantRepo.CreateWithTx(tx, tenant); err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to create tenant")
-		return fmt.Errorf("something Went wrong %w", err)
+		return appErrors.ErrInternalServer
 	}
 
 	features, err := utils.ToStringJSON(resPlan.Plan.Feature)
@@ -129,7 +130,7 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to un-marshal feature")
-		return fmt.Errorf("something Went wrong %w", err)
+		return appErrors.ErrInternalServer
 	}
 
 	var tenantSettings []*modelTenant.TenantSetting
@@ -147,7 +148,7 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to insert tenant settings")
-		return fmt.Errorf("something Went wrong %w", err)
+		return appErrors.ErrInternalServer
 	}
 
 	eventCategories := service.BulkCategories(tenant.ID)
@@ -157,14 +158,14 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to insert event tags")
-		return fmt.Errorf("something Went wrong %w", err)
+		return appErrors.ErrInternalServer
 	}
 
 	if err = u.eventTagRepo.CreateBulkWithTx(tx, eventTags); err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to insert event tags")
-		return fmt.Errorf("something Went wrong %w", err)
+		return appErrors.ErrInternalServer
 	}
 
 	var endDate *time.Time
@@ -186,7 +187,7 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to create subscription")
-		return fmt.Errorf("something Went wrong %w", err)
+		return appErrors.ErrInternalServer
 	}
 
 	user := &modelUser.User{
@@ -202,7 +203,7 @@ func (u *tenantUsecase) RegisterTenant(request request.CreateTenantRequest) erro
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to create user")
-		return fmt.Errorf("something Went wrong %w", err)
+		return appErrors.ErrInternalServer
 	}
 
 	err = tx.Commit().Error
@@ -216,7 +217,7 @@ func (u *tenantUsecase) UpdateInformation(id string, req request.UpdateInformati
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to get tenant")
-		return fmt.Errorf("something Went wrong %w", err)
+		return appErrors.ErrInternalServer
 	}
 
 	if req.Name != nil {
@@ -230,10 +231,10 @@ func (u *tenantUsecase) UpdateInformation(id string, req request.UpdateInformati
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to update tenant")
-		return fmt.Errorf("something Went wrong %w", err)
+		return appErrors.ErrInternalServer
 	}
 
-	return nil
+	return err
 }
 
 func (u *tenantUsecase) UpdateStatus(id string, req request.UpdateStatusTenantRequest) error {
@@ -243,7 +244,7 @@ func (u *tenantUsecase) UpdateStatus(id string, req request.UpdateStatusTenantRe
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to get tenant")
-		return fmt.Errorf("something Went wrong %w", err)
+		return appErrors.ErrInternalServer
 	}
 
 	tenant.IsActive = *req.IsActive
@@ -252,8 +253,8 @@ func (u *tenantUsecase) UpdateStatus(id string, req request.UpdateStatusTenantRe
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to update tenant")
-		return fmt.Errorf("something Went wrong %w", err)
+		return appErrors.ErrInternalServer
 	}
 
-	return nil
+	return err
 }
