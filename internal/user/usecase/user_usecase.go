@@ -137,7 +137,7 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.Aut
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to bcrypt password")
-		return err
+		return appErrors.WrapExpose(err, "Internal server Error", http.StatusInternalServerError)
 	}
 
 	role, err := u.roleRepo.GetByID("organizer")
@@ -146,7 +146,7 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.Aut
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to get Role")
-		return err
+		return appErrors.Wrap(err, "Internal server Error", http.StatusInternalServerError)
 	}
 
 	user := &modelUser.User{
@@ -163,7 +163,7 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.Aut
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to create user")
-		return fmt.Errorf("something Went wrong %w", err)
+		return appErrors.Wrap(err, "Internal server Error", http.StatusInternalServerError)
 	}
 
 	userLog := responseDTO.UserLog{
@@ -177,14 +177,14 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.Aut
 
 	userJSON, err := json.Marshal(userLog)
 	if err != nil {
-		return fmt.Errorf("errors marshaling user")
+		return appErrors.WrapExpose(err, "Internal server Error", http.StatusInternalServerError)
 	}
 
 	if err == nil {
 		helper.LogActivity(u.activityRepo, auth.ID, url, "Create User", string(userJSON), "user", user.ID)
 	}
 
-	return err
+	return nil
 }
 
 func (u *userUsecase) GetAll(query request.UserPaginateParams, tenantID *string) ([]*response.UserListItemResponse, int64, error) {
@@ -193,7 +193,7 @@ func (u *userUsecase) GetAll(query request.UserPaginateParams, tenantID *string)
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to get users")
-		return nil, 0, fmt.Errorf("something Went wrong %w", err)
+		return nil, 0, appErrors.Wrap(err, "Internal server Error", http.StatusInternalServerError)
 	}
 	return mapper.FromUserToList(users), total, err
 }
@@ -204,7 +204,7 @@ func (u *userUsecase) GetByID(id string) (*response.UserResponse, error) {
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to get users")
-		return nil, fmt.Errorf("something Went wrong %w", err)
+		return nil, appErrors.Wrap(err, "Internal server Error", http.StatusInternalServerError)
 	}
 	return mapper.FromUserModel(user), err
 }

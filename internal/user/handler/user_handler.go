@@ -1,6 +1,7 @@
 package handler
 
 import (
+	appErrors "github.com/andrianprasetya/eventHub/internal/shared/errors"
 	"github.com/andrianprasetya/eventHub/internal/shared/middleware"
 	"github.com/andrianprasetya/eventHub/internal/shared/response"
 	"github.com/andrianprasetya/eventHub/internal/shared/validation"
@@ -35,7 +36,15 @@ func (h *UserHandler) Create(c *fiber.Ctx) error {
 	}
 
 	if err := h.userUC.Create(req, &userAuth, url); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
+		if appErr, ok := err.(*appErrors.AppError); ok {
+			message := appErr.Message
+			var errRes error
+			if appErr.ShouldExpose() {
+				errRes = appErr.Err
+			}
+			return c.Status(appErr.StatusCode()).JSON(response.ErrorResponse(appErr.StatusCode(), message, errRes))
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), nil))
 	}
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(fiber.StatusOK, "User registered successfully"))
 }
@@ -56,7 +65,15 @@ func (h *UserHandler) GetAll(c *fiber.Ctx) error {
 
 	users, total, err := h.userUC.GetAll(query, tenantID)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
+		if appErr, ok := err.(*appErrors.AppError); ok {
+			message := appErr.Message
+			var errRes error
+			if appErr.ShouldExpose() {
+				errRes = appErr.Err
+			}
+			return c.Status(appErr.StatusCode()).JSON(response.ErrorResponse(appErr.StatusCode(), message, errRes))
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), nil))
 	}
 	return c.Status(fiber.StatusOK).JSON(response.SuccessWithPaginateDataResponse(
 		fiber.StatusOK,
@@ -70,7 +87,15 @@ func (h *UserHandler) GetByID(c *fiber.Ctx) error {
 
 	user, err := h.userUC.GetByID(id)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
+		if appErr, ok := err.(*appErrors.AppError); ok {
+			message := appErr.Message
+			var errRes error
+			if appErr.ShouldExpose() {
+				errRes = appErr.Err
+			}
+			return c.Status(appErr.StatusCode()).JSON(response.ErrorResponse(appErr.StatusCode(), message, errRes))
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), nil))
 	}
 	return c.Status(fiber.StatusOK).JSON(response.SuccessWithDataResponse(fiber.StatusOK, "Get User Successfully", user))
 }
@@ -89,7 +114,15 @@ func (h *UserHandler) Update(c *fiber.Ctx) error {
 	}
 
 	if err := h.userUC.Update(req, id); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
+		if appErr, ok := err.(*appErrors.AppError); ok {
+			message := appErr.Message
+			var errRes error
+			if appErr.ShouldExpose() {
+				errRes = appErr.Err
+			}
+			return c.Status(appErr.StatusCode()).JSON(response.ErrorResponse(appErr.StatusCode(), message, errRes))
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), nil))
 	}
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(fiber.StatusOK, "Update User Successfully"))
 
@@ -98,7 +131,15 @@ func (h *UserHandler) Update(c *fiber.Ctx) error {
 func (h *UserHandler) Delete(c *fiber.Ctx) error {
 	id := c.Params("id")
 	if err := h.userUC.Delete(id); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
+		if appErr, ok := err.(*appErrors.AppError); ok {
+			message := appErr.Message
+			var errRes error
+			if appErr.ShouldExpose() {
+				errRes = appErr.Err
+			}
+			return c.Status(appErr.StatusCode()).JSON(response.ErrorResponse(appErr.StatusCode(), message, errRes))
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), nil))
 	}
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(fiber.StatusOK, "Delete User Successfully"))
 }

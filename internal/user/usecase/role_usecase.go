@@ -1,7 +1,6 @@
 package usecase
 
 import (
-	"fmt"
 	appErrors "github.com/andrianprasetya/eventHub/internal/shared/errors"
 	"github.com/andrianprasetya/eventHub/internal/user/dto/mapper"
 	"github.com/andrianprasetya/eventHub/internal/user/dto/request"
@@ -26,6 +25,7 @@ func NewRoleUsecase(roleRepo repository.RoleRepository) RoleUsecase {
 
 func (r *roleUsecase) GetAll(query request.RolePaginateParams) ([]*response.RoleListItemResponse, int64, error) {
 	roles, total, err := r.roleRepo.GetAll(query)
+
 	if err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,
@@ -41,8 +41,8 @@ func (r *roleUsecase) GetByID(id string) (*response.RoleResponse, error) {
 	if err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,
-		}).Error("failed to get Role ")
-		return nil, fmt.Errorf("something Went wrong %w", err)
+		}).Error("failed to get Role")
+		return nil, appErrors.Wrap(err, "Internal server Error", http.StatusInternalServerError)
 	}
 	return mapper.FromRoleModel(role), err
 

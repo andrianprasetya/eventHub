@@ -51,7 +51,15 @@ func (u *RoleHandler) GetByID(c *fiber.Ctx) error {
 	id := c.Params("id")
 	role, err := u.roleUC.GetByID(id)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
+		if appErr, ok := err.(*appErrors.AppError); ok {
+			message := appErr.Message
+			var errRes error
+			if appErr.ShouldExpose() {
+				errRes = appErr.Err
+			}
+			return c.Status(appErr.StatusCode()).JSON(response.ErrorResponse(appErr.StatusCode(), message, errRes))
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), nil))
 	}
 
 	return c.Status(fiber.StatusOK).JSON(response.SuccessWithDataResponse(fiber.StatusOK, "get Role successfully", role))

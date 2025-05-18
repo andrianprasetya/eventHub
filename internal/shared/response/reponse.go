@@ -13,8 +13,8 @@ type Meta struct {
 }
 
 type Data[T any] struct {
-	Item  T   `json:"item,omitempty"`
-	Items []T `json:"items,omitempty"`
+	Item  T   `json:"item"`
+	Items []T `json:"items"`
 }
 
 type PageInfo struct {
@@ -41,7 +41,8 @@ func SuccessWithDataResponse[T any](code int, msg string, data T) *APIResponse[T
 			Message: msg,
 		},
 		Data: &Data[T]{
-			Item: data,
+			Item:  data,
+			Items: make([]T, 0),
 		},
 		PageInfo: nil,
 	}
@@ -49,6 +50,8 @@ func SuccessWithDataResponse[T any](code int, msg string, data T) *APIResponse[T
 
 func SuccessWithPaginateDataResponse[T any](code int, msg string, data []T, page, pageSize int, totalItems int64) *APIResponse[T] {
 	totalPages := int((totalItems + int64(pageSize) - 1) / int64(pageSize))
+	var empty T
+
 	return &APIResponse[T]{
 		Meta: &Meta{
 			Code:    code,
@@ -61,6 +64,7 @@ func SuccessWithPaginateDataResponse[T any](code int, msg string, data []T, page
 			PageSize:   pageSize,
 		},
 		Data: &Data[T]{
+			Item:  empty,
 			Items: data,
 		},
 	}
