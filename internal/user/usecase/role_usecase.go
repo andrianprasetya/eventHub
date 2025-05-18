@@ -7,7 +7,6 @@ import (
 	"github.com/andrianprasetya/eventHub/internal/user/dto/response"
 	"github.com/andrianprasetya/eventHub/internal/user/repository"
 	log "github.com/sirupsen/logrus"
-	"net/http"
 )
 
 type RoleUsecase interface {
@@ -30,7 +29,7 @@ func (r *roleUsecase) GetAll(query request.RolePaginateParams) ([]*response.Role
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to get Role")
-		return nil, 0, appErrors.Wrap(err, "Internal server Error", http.StatusInternalServerError)
+		return nil, 0, appErrors.ErrInternalServer
 	}
 
 	return mapper.FromRoleToList(roles), total, err
@@ -42,7 +41,7 @@ func (r *roleUsecase) GetByID(id string) (*response.RoleResponse, error) {
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to get Role")
-		return nil, appErrors.Wrap(err, "Internal server Error", http.StatusInternalServerError)
+		return nil, appErrors.ErrInternalServer
 	}
 	return mapper.FromRoleModel(role), err
 
