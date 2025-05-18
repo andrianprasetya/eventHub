@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"fmt"
+	appErrors "github.com/andrianprasetya/eventHub/internal/shared/errors"
 	"github.com/andrianprasetya/eventHub/internal/shared/utils"
 	"github.com/andrianprasetya/eventHub/internal/tenant/dto/mapper"
 	"github.com/andrianprasetya/eventHub/internal/tenant/dto/request"
@@ -28,8 +29,13 @@ func NewSubscriptionPlanUsecase(subscriptionPlanRepo repository.SubscriptionPlan
 }
 
 func (u *subscriptionPlanUsecase) Create(req request.CreateSubscriptionPlanRequest) (*response.SubscriptionPlanResponse, error) {
-	features := utils.ToJSONString(req.Feature)
-
+	features, err := utils.ToJSONString(req.Feature)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"errors": err,
+		}).Error("failed to modify Json to string")
+		return nil, appErrors.ErrInternalServer
+	}
 	subscriptionPlan := &model.SubscriptionPlan{
 		ID:          utils.GenerateID(),
 		Name:        req.Name,
@@ -42,7 +48,7 @@ func (u *subscriptionPlanUsecase) Create(req request.CreateSubscriptionPlanReque
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to create subscription plan")
-		return &response.SubscriptionPlanResponse{}, fmt.Errorf("something Went wrong %w", err)
+		return nil, appErrors.ErrInternalServer
 	}
 	return mapper.FromSubscriptionModel(subscriptionPlan), nil
 }
@@ -74,8 +80,14 @@ func (u *subscriptionPlanUsecase) Update(id string, req request.UpdateSubscripti
 		subscriptionPlan.Price = *req.Price
 	}
 	if req.Feature != nil {
-		feature := utils.ToJSONString(*req.Feature)
-		subscriptionPlan.Feature = feature
+		featureUpdated, err := utils.ToJSONString(*req.Feature)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"errors": err,
+			}).Error("failed to modify Json to string")
+			return nil, appErrors.ErrInternalServer
+		}
+		subscriptionPlan.Feature = featureUpdated
 	}
 	if req.DurationDay != nil {
 		subscriptionPlan.DurationDay = *req.DurationDay
@@ -85,10 +97,10 @@ func (u *subscriptionPlanUsecase) Update(id string, req request.UpdateSubscripti
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to create subscription plan")
-		return &response.SubscriptionPlanResponse{}, fmt.Errorf("something Went wrong")
+		return nil, appErrors.ErrInternalServer
 	}
 
-	return mapper.FromSubscriptionModel(subscriptionPlan), nil
+	return mapper.FromSubscriptionModel(subscriptionPlan), err
 }
 
 func (u *subscriptionPlanUsecase) GetByID(id string) (*response.SubscriptionPlanResponse, error) {
@@ -97,9 +109,9 @@ func (u *subscriptionPlanUsecase) GetByID(id string) (*response.SubscriptionPlan
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to get subscription plan")
-		return &response.SubscriptionPlanResponse{}, fmt.Errorf("something Went wrong")
+		return nil, appErrors.ErrInternalServer
 	}
-	return mapper.FromSubscriptionModel(subscriptionPlan), nil
+	return mapper.FromSubscriptionModel(subscriptionPlan), err
 }
 
 func (u *subscriptionPlanUsecase) Delete(id string) error {
@@ -107,7 +119,7 @@ func (u *subscriptionPlanUsecase) Delete(id string) error {
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to delete subscription plan")
-		return fmt.Errorf("something Went wrong")
+		return appErrors.ErrInternalServer
 	}
 	return nil
 }

@@ -22,13 +22,9 @@ func GenerateDomainName(s string) string {
 	return fmt.Sprintf("%s-%s%d", Slugify(s), dateTimePrefix, randomNumber)
 }
 
-func ToJSONString(v interface{}) string {
+func ToJSONString(v interface{}) (string, error) {
 	bytes, err := json.Marshal(v)
-	if err != nil {
-		fmt.Println("errors marshalling feature:", err)
-		return "{}"
-	}
-	return string(bytes)
+	return string(bytes), err
 }
 
 func ToStringJSON(v string) (map[string]interface{}, error) {

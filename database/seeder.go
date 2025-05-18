@@ -42,45 +42,53 @@ func SeedUsers(DB *gorm.DB) {
 		},
 	}
 
+	featureFree, err := utils.ToJSONString(map[string]interface{}{
+		"max_events":                  1,
+		"max_tickets_per_event":       50,
+		"max_users":                   1,
+		"unlimited_events":            false,
+		"unlimited_tickets_per_event": false,
+		"unlimited_users":             false,
+	})
+	featureBasic, err := utils.ToJSONString(map[string]interface{}{
+		"max_events":                  4,
+		"max_tickets_per_event":       200,
+		"max_users":                   4,
+		"unlimited_events":            false,
+		"unlimited_tickets_per_event": false,
+		"unlimited_users":             false,
+	})
+	featurePremium, err := utils.ToJSONString(map[string]interface{}{
+		"max_events":                  0,
+		"max_tickets_per_event":       0,
+		"max_users":                   0,
+		"unlimited_events":            true,
+		"unlimited_tickets_per_event": true,
+		"unlimited_users":             true,
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
 	subscriptionPlans := []modelTenant.SubscriptionPlan{
 		{
-			ID:   utils.GenerateID(),
-			Name: "Free",
-			Feature: utils.ToJSONString(map[string]interface{}{
-				"max_events":                  1,
-				"max_tickets_per_event":       50,
-				"max_users":                   1,
-				"unlimited_events":            false,
-				"unlimited_tickets_per_event": false,
-				"unlimited_users":             false,
-			}),
+			ID:          utils.GenerateID(),
+			Name:        "Free",
+			Feature:     featureFree,
 			DurationDay: -1,
 		},
 		{
-			ID:   utils.GenerateID(),
-			Name: "Basic",
-			Feature: utils.ToJSONString(map[string]interface{}{
-				"max_events":                  4,
-				"max_tickets_per_event":       200,
-				"max_users":                   4,
-				"unlimited_events":            false,
-				"unlimited_tickets_per_event": false,
-				"unlimited_users":             false,
-			}),
+			ID:          utils.GenerateID(),
+			Name:        "Basic",
+			Feature:     featureBasic,
 			Price:       5000,
 			DurationDay: 30,
 		},
 		{
-			ID:   utils.GenerateID(),
-			Name: "Premium",
-			Feature: utils.ToJSONString(map[string]interface{}{
-				"max_events":                  0,
-				"max_tickets_per_event":       0,
-				"max_users":                   0,
-				"unlimited_events":            true,
-				"unlimited_tickets_per_event": true,
-				"unlimited_users":             true,
-			}),
+			ID:          utils.GenerateID(),
+			Name:        "Premium",
+			Feature:     featurePremium,
 			Price:       20000,
 			DurationDay: 30,
 		},
