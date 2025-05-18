@@ -1,6 +1,7 @@
 package handler
 
 import (
+	appErrors "github.com/andrianprasetya/eventHub/internal/shared/errors"
 	"github.com/andrianprasetya/eventHub/internal/shared/response"
 	"github.com/andrianprasetya/eventHub/internal/shared/validation"
 	"github.com/andrianprasetya/eventHub/internal/tenant/dto/request"
@@ -33,7 +34,15 @@ func (h *TenantHandler) RegisterTenant(c *fiber.Ctx) error {
 	}
 
 	if err := h.tenantUC.RegisterTenant(req); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
+		if appErr, ok := err.(*appErrors.AppError); ok {
+			message := appErr.Message
+			var errRes error
+			if appErr.ShouldExpose() {
+				errRes = appErr.Err
+			}
+			return c.Status(appErr.StatusCode()).JSON(response.ErrorResponse(appErr.StatusCode(), message, errRes))
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), nil))
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(response.SuccessResponse(fiber.StatusCreated, "Tenant registered successfully"))
@@ -54,7 +63,15 @@ func (h *TenantHandler) UpdateInformation(c *fiber.Ctx) error {
 	}
 
 	if err := h.tenantUC.UpdateInformation(id, req); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
+		if appErr, ok := err.(*appErrors.AppError); ok {
+			message := appErr.Message
+			var errRes error
+			if appErr.ShouldExpose() {
+				errRes = appErr.Err
+			}
+			return c.Status(appErr.StatusCode()).JSON(response.ErrorResponse(appErr.StatusCode(), message, errRes))
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), nil))
 	}
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(fiber.StatusOK, "Tenant updated successfully"))
 }
@@ -74,7 +91,15 @@ func (h *TenantHandler) UpdateStatus(c *fiber.Ctx) error {
 	}
 
 	if err := h.tenantUC.UpdateStatus(id, req); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), err))
+		if appErr, ok := err.(*appErrors.AppError); ok {
+			message := appErr.Message
+			var errRes error
+			if appErr.ShouldExpose() {
+				errRes = appErr.Err
+			}
+			return c.Status(appErr.StatusCode()).JSON(response.ErrorResponse(appErr.StatusCode(), message, errRes))
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), nil))
 	}
 	return c.Status(fiber.StatusOK).JSON(response.SuccessResponse(fiber.StatusOK, "Tenant updated successfully"))
 }
