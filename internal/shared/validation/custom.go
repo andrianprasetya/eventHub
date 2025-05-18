@@ -52,6 +52,11 @@ func validateNotPast(fl validator.FieldLevel) bool {
 	return start >= today
 }
 
+func validateTinyInt(fl validator.FieldLevel) bool {
+	val := fl.Field().Int()
+	return val == 0 || val == 1
+}
+
 func validateDateOnly(fl validator.FieldLevel) bool {
 	if fl.Field().String() != "" {
 		regex := regexp.MustCompile(`^\d{4}-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])$`)

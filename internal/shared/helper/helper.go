@@ -33,15 +33,16 @@ func LogLoginHistory(repo repository.LoginHistoryRepository, userId, ip string) 
 	}(log)
 }
 
-func LogActivity(repo repository.LogActivityRepository, userId, url, action, objectData, objectType, objectId string) {
+func LogActivity(repo repository.LogActivityRepository, tenantID, userID, url, action, objectData, objectType, objectID string) {
 	activity := &model.ActivityLog{
 		ID:         utils.GenerateID(),
-		UserID:     userId,
+		TenantID:   tenantID,
+		UserID:     userID,
 		URL:        url,
 		Action:     action,
 		ObjectData: objectData,
 		ObjectType: objectType,
-		ObjectID:   objectId,
+		ObjectID:   objectID,
 	}
 
 	go func(activity *model.ActivityLog) {

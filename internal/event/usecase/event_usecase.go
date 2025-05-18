@@ -81,11 +81,14 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 		Title:       req.Title,
 		TenantID:    auth.Tenant.ID,
 		CategoryID:  req.CategoryID,
+		EventType:   req.EventType,
 		Tags:        req.Tags,
 		Description: req.Description,
 		Location:    req.Location,
 		StartDate:   req.StartDate,
 		EndDate:     req.EndDate,
+		CreatedBy:   auth.ID,
+		IsTicket:    req.IsTicket,
 		Status:      req.Status,
 	}
 
@@ -161,7 +164,7 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 		ID:          event.ID,
 		TenantID:    event.TenantID,
 		Description: event.Description,
-		Location:    event.Location,
+		Location:    *event.Location,
 		StartDate:   event.StartDate,
 		EndDate:     event.EndDate,
 	}
@@ -172,7 +175,7 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 	}
 	err = tx.Commit().Error
 	if err == nil {
-		helper.LogActivity(u.activityRepo, auth.ID, url, "Create Event", string(userJSON), "event", event.ID)
+		helper.LogActivity(u.activityRepo, auth.Tenant.ID, auth.ID, url, "Create Event", string(userJSON), "event", event.ID)
 	}
 
 	return mapper.FromEventModel(event), err

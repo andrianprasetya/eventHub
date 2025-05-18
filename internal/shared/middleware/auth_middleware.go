@@ -60,7 +60,7 @@ func AuthMiddleware(redis redisser.RedisClient) fiber.Handler {
 		ctx := context.Background()
 		data, err := redis.Get(ctx, "user:jwt:"+userID)
 		if err != nil {
-			return c.Status(fiber.StatusUnauthorized).JSON(response.ErrorResponse(fiber.StatusUnauthorized, "Token expired or invalid", err))
+			return c.Status(fiber.StatusUnauthorized).JSON(response.ErrorResponse(fiber.StatusUnauthorized, "Token expired or invalid", nil))
 		}
 
 		var authUser AuthUser

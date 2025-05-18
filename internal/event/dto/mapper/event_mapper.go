@@ -13,11 +13,13 @@ func FromEventModel(event *model.Event) *response.EventResponse {
 			ID:   event.Category.ID,
 			Name: event.Category.Name,
 		},
+		EventType:   event.EventType,
 		Tags:        *event.Tags,
 		Description: *event.Description,
 		Location:    event.Location,
 		StartDate:   event.StartDate,
 		EndDate:     event.EndDate,
+		IsTicket:    event.IsTicket,
 		Status:      event.Status,
 	}
 }
@@ -27,9 +29,11 @@ func FromEventToListItem(event *model.Event) *response.EventListItemResponse {
 		ID:           event.ID,
 		Title:        event.Title,
 		CategoryName: event.Category.Name,
+		EventType:    event.EventType,
 		Tags:         *event.Tags,
 		StartDate:    event.StartDate,
 		EndDate:      event.EndDate,
+		IsTicket:     event.IsTicket,
 		Status:       event.Status,
 	}
 }

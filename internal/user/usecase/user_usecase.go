@@ -173,7 +173,7 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.Aut
 		return appErrors.ErrInternalServer
 	}
 
-	role, err := u.roleRepo.GetBySlug("organizer")
+	role, err := u.roleRepo.GetByID(req.RoleID)
 
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -214,7 +214,7 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.Aut
 	}
 
 	if err == nil {
-		helper.LogActivity(u.activityRepo, auth.ID, url, "Create User", string(userJSON), "user", user.ID)
+		helper.LogActivity(u.activityRepo, auth.Tenant.ID, auth.ID, url, "Create User", string(userJSON), "user", user.ID)
 	}
 
 	return nil
