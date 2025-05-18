@@ -2,13 +2,13 @@ package usecase
 
 import (
 	"encoding/json"
-	"fmt"
 	logRepository "github.com/andrianprasetya/eventHub/internal/audit_security_log/repository"
 	"github.com/andrianprasetya/eventHub/internal/event/dto/mapper"
 	"github.com/andrianprasetya/eventHub/internal/event/dto/request"
 	"github.com/andrianprasetya/eventHub/internal/event/dto/response"
 	"github.com/andrianprasetya/eventHub/internal/event/model"
 	"github.com/andrianprasetya/eventHub/internal/event/repository"
+	appErrors "github.com/andrianprasetya/eventHub/internal/shared/errors"
 	"github.com/andrianprasetya/eventHub/internal/shared/helper"
 	"github.com/andrianprasetya/eventHub/internal/shared/middleware"
 	repositoryShared "github.com/andrianprasetya/eventHub/internal/shared/repository"
@@ -70,7 +70,7 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 			log.WithFields(log.Fields{
 				"errors": r,
 			}).Error("Failed to create event  (panic recovered)")
-			err = fmt.Errorf("something went wrong")
+			err = appErrors.ErrInternalServer
 		} else if err != nil {
 			tx.Rollback()
 		}
@@ -93,14 +93,14 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to create event")
-		return &response.EventResponse{}, err
+		return nil, appErrors.ErrInternalServer
 	}
 
 	if err = u.eventCategoryRepo.AddCategoryToEventWithTx(tx, event.ID, event); err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to add category to event")
-		return &response.EventResponse{}, err
+		return nil, appErrors.ErrInternalServer
 	}
 
 	var eventTickets []*modelTicket.EventTicket
@@ -118,7 +118,7 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to create ticket")
-		return &response.EventResponse{}, err
+		return nil, appErrors.ErrInternalServer
 	}
 
 	var discounts []*modelTicket.Discount
@@ -137,7 +137,7 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to create discount ticket")
-		return &response.EventResponse{}, err
+		return nil, appErrors.ErrInternalServer
 	}
 
 	var sessions []*model.EventSession
@@ -154,7 +154,7 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to create event session")
-		return &response.EventResponse{}, err
+		return nil, appErrors.ErrInternalServer
 	}
 
 	userLog := responseDTO.EventLog{
@@ -168,7 +168,7 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 
 	userJSON, errMarshal := json.Marshal(userLog)
 	if errMarshal != nil {
-		return &response.EventResponse{}, err
+		return nil, appErrors.ErrInternalServer
 	}
 	err = tx.Commit().Error
 	if err == nil {
@@ -180,23 +180,47 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 
 func (u *eventUsecase) GetTags(page, pageSize int) ([]*response.EventTagListItemResponse, int64, error) {
 	eventTags, total, err := u.eventTagRepo.GetAll(page, pageSize)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"errors": err,
+		}).Error("failed to get tags")
+		return nil, 0, appErrors.ErrInternalServer
+	}
 
 	return mapper.FromEventTagToList(eventTags), total, err
 }
 func (u *eventUsecase) GetCategories(page, pageSize int) ([]*response.EventCategoryListItemResponse, int64, error) {
 	eventCategories, total, err := u.eventCategoryRepo.GetAll(page, pageSize)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"errors": err,
+		}).Error("failed to get categories")
+		return nil, 0, appErrors.ErrInternalServer
+	}
 
 	return mapper.FromEventCategoryToList(eventCategories), total, err
 }
 
 func (u *eventUsecase) GetAll(page, pageSize int) ([]*response.EventListItemResponse, int64, error) {
 	events, total, err := u.eventRepo.GetAll(page, pageSize)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"errors": err,
+		}).Error("failed to get categories")
+		return nil, 0, appErrors.ErrInternalServer
+	}
 
 	return mapper.FromEventToList(events), total, err
 }
 
 func (u *eventUsecase) GetByID(id string) (*response.EventResponse, error) {
 	event, err := u.eventRepo.GetByID(id)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"errors": err,
+		}).Error("failed to get categories")
+		return nil, appErrors.ErrInternalServer
+	}
 
 	return mapper.FromEventModel(event), err
 }
