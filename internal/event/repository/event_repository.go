@@ -10,6 +10,7 @@ type EventRepository interface {
 	Create(tx *gorm.DB, event *model.Event) error
 	GetAll(query request.EventPaginateRequest, tenantID *string) ([]*model.Event, int64, error)
 	GetByID(id string) (*model.Event, error)
+	CountCreatedEvent(tenantID string) int
 }
 
 type eventRepository struct {
@@ -55,4 +56,12 @@ func (r *eventRepository) GetByID(id string) (*model.Event, error) {
 		return nil, err
 	}
 	return &event, nil
+}
+
+func (r *eventRepository) CountCreatedEvent(tenantID string) int {
+	var count int64
+	if err := r.DB.Model(model.Event{}).Where("tenant_id = ?", tenantID).Count(&count).Error; err != nil {
+		return 0
+	}
+	return int(count)
 }

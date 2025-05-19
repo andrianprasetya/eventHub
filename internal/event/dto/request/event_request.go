@@ -29,7 +29,7 @@ type EventTicket struct {
 
 type EventSession struct {
 	Title         string    `json:"title" validate:"required"`
-	StartDateTime time.Time `json:"start_date_time" validate:"required,not_past_date"`
+	StartDateTime time.Time `json:"start_date_time" validate:"required,not_past_datetime"`
 	EndDateTime   time.Time `json:"end_date_time" validate:"required"`
 }
 

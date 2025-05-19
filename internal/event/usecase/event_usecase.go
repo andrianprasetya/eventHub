@@ -13,10 +13,13 @@ import (
 	"github.com/andrianprasetya/eventHub/internal/shared/middleware"
 	repositoryShared "github.com/andrianprasetya/eventHub/internal/shared/repository"
 	responseDTO "github.com/andrianprasetya/eventHub/internal/shared/response"
+	"github.com/andrianprasetya/eventHub/internal/shared/service"
 	"github.com/andrianprasetya/eventHub/internal/shared/utils"
+	repositoruTenant "github.com/andrianprasetya/eventHub/internal/tenant/repository"
 	modelTicket "github.com/andrianprasetya/eventHub/internal/ticket/model"
 	repositoryTicket "github.com/andrianprasetya/eventHub/internal/ticket/repository"
 	log "github.com/sirupsen/logrus"
+	"net/http"
 )
 
 type EventUsecase interface {
@@ -29,6 +32,7 @@ type EventUsecase interface {
 
 type eventUsecase struct {
 	txManager         repositoryShared.TxManager
+	tenantSettingRepo repositoruTenant.TenantSettingRepository
 	eventRepo         repository.EventRepository
 	eventTagRepo      repository.EventTagRepository
 	eventCategoryRepo repository.EventCategoryRepository
@@ -40,6 +44,7 @@ type eventUsecase struct {
 
 func NewEventUsecase(
 	txManager repositoryShared.TxManager,
+	tenantSettingRepo repositoruTenant.TenantSettingRepository,
 	eventRepo repository.EventRepository,
 	eventTagRepo repository.EventTagRepository,
 	eventCategoryRepo repository.EventCategoryRepository,
@@ -50,6 +55,7 @@ func NewEventUsecase(
 ) EventUsecase {
 	return &eventUsecase{
 		txManager:         txManager,
+		tenantSettingRepo: tenantSettingRepo,
 		eventRepo:         eventRepo,
 		eventTagRepo:      eventTagRepo,
 		eventCategoryRepo: eventCategoryRepo,
@@ -60,6 +66,7 @@ func NewEventUsecase(
 }
 
 func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.AuthUser, url string) (*response.EventResponse, error) {
+
 	tx := u.txManager.Begin()
 
 	var err error
@@ -75,6 +82,15 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 			tx.Rollback()
 		}
 	}()
+	tenantSettings, err := u.tenantSettingRepo.GetByTenantID(auth.Tenant.ID, "max_events")
+	countEventCreated := u.eventRepo.CountCreatedEvent(auth.Tenant.ID)
+	if err != nil {
+		return nil, appErrors.ErrInternalServer
+	}
+
+	if err = service.CheckMaxEventCanCreated(countEventCreated, tenantSettings); err != nil {
+		return nil, appErrors.WrapExpose(err, "Created event quota Has been limit", http.StatusUnprocessableEntity)
+	}
 
 	event := &model.Event{
 		ID:          utils.GenerateID(),
@@ -147,6 +163,7 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 	for _, session := range req.Sessions {
 		sessions = append(sessions, &model.EventSession{
 			ID:            utils.GenerateID(),
+			EventID:       event.ID,
 			Title:         session.Title,
 			StartDateTime: session.StartDateTime,
 			EndDateTime:   session.EndDateTime,

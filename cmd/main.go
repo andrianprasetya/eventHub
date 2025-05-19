@@ -66,6 +66,7 @@ func main() {
 	roleUC := userUsecase.NewRoleUsecase(roleRepo)
 	eventUC := eventUsecase.NewEventUsecase(
 		txManager,
+		tenantSettingRepo,
 		eventRepo,
 		eventTagRepo,
 		eventCategoryRepo,

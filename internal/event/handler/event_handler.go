@@ -1,10 +1,10 @@
 package handler
 
 import (
-	"fmt"
 	"github.com/andrianprasetya/eventHub/internal/event/dto/request"
 	"github.com/andrianprasetya/eventHub/internal/event/usecase"
 	appErrors "github.com/andrianprasetya/eventHub/internal/shared/errors"
+	"github.com/andrianprasetya/eventHub/internal/shared/helper"
 	"github.com/andrianprasetya/eventHub/internal/shared/middleware"
 	"github.com/andrianprasetya/eventHub/internal/shared/response"
 	"github.com/andrianprasetya/eventHub/internal/shared/validation"
@@ -65,38 +65,7 @@ func (h *EventHandler) Create(c *fiber.Ctx) error {
 	if errValidation := validation.NewValidator().Validate(&req); errValidation != nil {
 		errs := errValidation.(validator.ValidationErrors)
 		errorMessages := validation.MapValidationErrorsToJSONTags(req, errs)
-
-		if req.EndDate.Before(req.StartDate) {
-			errorMessages["end_date"] = "end_date must not below start_date"
-		}
-		for i, discount := range req.Discounts {
-			if discount.EndDate.Before(discount.StartDate) {
-				key := fmt.Sprintf("discounts[%d].end_date", i)
-				errorMessages[key] = "end_date must not below start_date"
-			}
-			if discount.StartDate.Before(req.StartDate) {
-				key := fmt.Sprintf("discounts[%d].start_date", i)
-				errorMessages[key] = "start_date discount must not below start_date event"
-			}
-			if discount.EndDate.After(req.EndDate) {
-				key := fmt.Sprintf("discounts[%d].end_date", i)
-				errorMessages[key] = "end_date discount must not above end_start event"
-			}
-		}
-		for i, session := range req.Sessions {
-			if session.EndDateTime.Before(session.StartDateTime) {
-				key := fmt.Sprintf("sessions[%d].end_date_time", i)
-				errorMessages[key] = "end_date_time sessions must not below start_date_time"
-			}
-			if session.StartDateTime.Before(req.StartDate) {
-				key := fmt.Sprintf("sessions[%d].start_date_time", i)
-				errorMessages[key] = "start_date sessions must not below start_date event"
-			}
-			if session.EndDateTime.After(req.EndDate) {
-				key := fmt.Sprintf("sessions[%d].end_date_time", i)
-				errorMessages[key] = "end_date sessions must not above end_start event"
-			}
-		}
+		helper.FilterEventCreate(req, errorMessages)
 
 		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationResponse(fiber.StatusBadRequest, errorMessages))
 	}
@@ -108,6 +77,7 @@ func (h *EventHandler) Create(c *fiber.Ctx) error {
 			if appErr.ShouldExpose() {
 				errRes = appErr.Err
 			}
+
 			return c.Status(appErr.StatusCode()).JSON(response.ErrorResponse(appErr.StatusCode(), message, errRes))
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), nil))

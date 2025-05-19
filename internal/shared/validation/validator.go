@@ -27,7 +27,10 @@ func NewValidator() *Validator {
 		log.Error("failed register validation is_array")
 	}
 
-	if err := v.validator.RegisterValidation("not_past_date", validateNotPast); err != nil {
+	if err := v.validator.RegisterValidation("not_past_date", validateDateNotPast); err != nil {
+		log.Error("failed register validation not_past")
+	}
+	if err := v.validator.RegisterValidation("not_past_datetime", validateDateTimeNotPast); err != nil {
 		log.Error("failed register validation not_past")
 	}
 
@@ -80,6 +83,8 @@ func MapValidationErrorsToJSONTags(req interface{}, errs validator.ValidationErr
 			errorMessages[fieldPath] = "must be unique"
 		case "not_past_date":
 			errorMessages[fieldPath] = "must not be before today"
+		case "not_past_datetime":
+			errorMessages[fieldPath] = "must not be before today time"
 		case "is_array":
 			errorMessages[fieldPath] = "must be an array"
 		case "smallint":
@@ -120,4 +125,14 @@ func trimStructPrefix(path string) string {
 		return path
 	}
 	return path[idx+1:]
+}
+
+type ValidationError map[string]string
+
+func (v ValidationError) Error() string {
+	var sb strings.Builder
+	for k, msg := range v {
+		sb.WriteString(fmt.Sprintf("%s: %s; ", k, msg))
+	}
+	return sb.String()
 }

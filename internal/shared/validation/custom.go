@@ -41,7 +41,16 @@ func nullTimeValidator(field reflect.Value) interface{} {
 	return nil
 }
 
-func validateNotPast(fl validator.FieldLevel) bool {
+func validateDateTimeNotPast(fl validator.FieldLevel) bool {
+	startDate, ok := fl.Field().Interface().(time.Time)
+	if !ok {
+		return false
+	}
+	now := time.Now()
+	return !startDate.Before(now)
+}
+
+func validateDateNotPast(fl validator.FieldLevel) bool {
 	startDate, ok := fl.Field().Interface().(time.Time)
 	if !ok {
 		return false
