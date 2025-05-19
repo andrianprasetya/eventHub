@@ -8,6 +8,7 @@ type OrderItem struct {
 	TicketID  string `gorm:"type:varchar(50);not null;index"`
 	Quantity  int    `gorm:"type:integer;default:1"`
 	Price     int    `gorm:"type:integer;default:0"`
+	Order     Order  `gorm:"foreignKey:OrderID;references:ID"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

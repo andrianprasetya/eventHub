@@ -9,6 +9,7 @@ type PaymentTransaction struct {
 	Amount          int    `gorm:"type:integer;default:0"`
 	Status          string `gorm:"type:varchar(15);not null;comment: pending | success | failed"`
 	TransactionData string `gorm:"type:text;not null"`
+	Order           Order  `gorm:"foreignKey:OrderID;references:ID"`
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }

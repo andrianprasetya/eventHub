@@ -45,7 +45,7 @@ func MigrateDatabase() {
 		//Order
 		&modelOrder.Order{},
 		&modelOrder.OrderItem{},
-		&modelOrder.Invoices{},
+		&modelOrder.Invoice{},
 		&modelOrder.PaymentTransaction{},
 
 		//CheckIn
