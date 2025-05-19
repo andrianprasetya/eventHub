@@ -90,9 +90,14 @@ func (h *EventHandler) GetAll(c *fiber.Ctx) error {
 	if err := c.QueryParser(&query); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(http.StatusBadRequest, "invalid query parameters", err))
 	}
-	userAuth := c.Locals("user").(middleware.AuthUser)
+	var tenantID *string
+	if user := c.Locals("user"); user != nil {
+		if userAuth, ok := user.(middleware.AuthUser); ok {
+			tenantID = &userAuth.Tenant.ID
+		}
+	}
 
-	events, total, err := h.eventUC.GetAll(query, &userAuth.Tenant.ID)
+	events, total, err := h.eventUC.GetAll(query, tenantID)
 	if err != nil {
 		if appErr, ok := err.(*appErrors.AppError); ok {
 			message := appErr.Message
@@ -124,3 +129,43 @@ func (h *EventHandler) GetByID(c *fiber.Ctx) error {
 	}
 	return c.Status(fiber.StatusOK).JSON(response.SuccessWithDataResponse(fiber.StatusOK, "Get Event Successfully", event))
 }
+
+/*func (h *EventHandler) GetAllPublic(c *fiber.Ctx) error {
+	var query request.EventPaginateRequest
+	if err := c.QueryParser(&query); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(response.ErrorResponse(http.StatusBadRequest, "invalid query parameters", err))
+	}
+
+	events, total, err := h.eventUC.GetAll(query, nil)
+	if err != nil {
+		if appErr, ok := err.(*appErrors.AppError); ok {
+			message := appErr.Message
+			var errRes error
+			if appErr.ShouldExpose() {
+				errRes = appErr.Err
+			}
+			return c.Status(appErr.StatusCode()).JSON(response.ErrorResponse(appErr.StatusCode(), message, errRes))
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), nil))
+	}
+	return c.Status(fiber.StatusOK).JSON(response.SuccessWithPaginateDataResponse(fiber.StatusOK, "Get Event Successfully", events, query.Page, query.PageSize, total))
+}
+
+func (h *EventHandler) GetByID(c *fiber.Ctx) error {
+	id := c.Params("id")
+
+	event, err := h.eventUC.GetByID(id)
+	if err != nil {
+		if appErr, ok := err.(*appErrors.AppError); ok {
+			message := appErr.Message
+			var errRes error
+			if appErr.ShouldExpose() {
+				errRes = appErr.Err
+			}
+			return c.Status(appErr.StatusCode()).JSON(response.ErrorResponse(appErr.StatusCode(), message, errRes))
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(response.ErrorResponse(fiber.StatusInternalServerError, err.Error(), nil))
+	}
+	return c.Status(fiber.StatusOK).JSON(response.SuccessWithDataResponse(fiber.StatusOK, "Get Event Successfully", event))
+}
+*/

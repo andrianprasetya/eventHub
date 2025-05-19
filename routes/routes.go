@@ -34,6 +34,9 @@ func SetupRoutes(c *fiber.App,
 	v1ApiPublic.Post("/register-tenant", tenantHandler.RegisterTenant)
 
 	subscriptionPublic := v1ApiPublic.Group("/subscription")
+	eventPublic := v1ApiPublic.Group("/event")
+	eventPublic.Get("/get-all-guest", eventHandler.GetAll)
+	eventPublic.Get("/get/:id", eventHandler.GetByID)
 	subscriptionPublic.Get("/get-plan-all", subscriptionPlanHandler.GetAll)
 	subscriptionPublic.Get("/get-plan/:id", subscriptionPlanHandler.Get)
 
@@ -65,6 +68,7 @@ func SetupRoutes(c *fiber.App,
 	event.Get("/get-tags", middleware.RequireRole("tenant-admin", "organizer"), eventHandler.GetTags)
 	event.Get("/get-categories", middleware.RequireRole("tenant-admin", "organizer"), eventHandler.GetCategories)
 	event.Post("/create", middleware.RequireRole("tenant-admin", "organizer"), eventHandler.Create)
+	event.Get("/get-all", middleware.RequireRole("super-admin", "tenant-admin", "organizer"), eventHandler.GetAll)
 
 	//subscription
 	subscription.Post("/create", middleware.RequireRole("super-admin"), subscriptionPlanHandler.Create)
