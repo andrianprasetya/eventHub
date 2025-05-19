@@ -15,6 +15,7 @@ import (
 	responseDTO "github.com/andrianprasetya/eventHub/internal/shared/response"
 	"github.com/andrianprasetya/eventHub/internal/shared/service"
 	"github.com/andrianprasetya/eventHub/internal/shared/utils"
+	modelTenant "github.com/andrianprasetya/eventHub/internal/tenant/model"
 	repositoruTenant "github.com/andrianprasetya/eventHub/internal/tenant/repository"
 	modelTicket "github.com/andrianprasetya/eventHub/internal/ticket/model"
 	repositoryTicket "github.com/andrianprasetya/eventHub/internal/ticket/repository"
@@ -70,6 +71,8 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 	tx := u.txManager.Begin()
 
 	var err error
+	var tenantSettingCH = make(chan *modelTenant.TenantSettingChannel)
+	var countCh = make(chan int)
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -82,13 +85,21 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 			tx.Rollback()
 		}
 	}()
-	tenantSettings, err := u.tenantSettingRepo.GetByTenantID(auth.Tenant.ID, "max_events")
-	countEventCreated := u.eventRepo.CountCreatedEvent(auth.Tenant.ID)
-	if err != nil {
+	go func() {
+		tenantSetting, err := u.tenantSettingRepo.GetByTenantID(auth.Tenant.ID, "max_events")
+		tenantSettingCH <- &modelTenant.TenantSettingChannel{TenantSetting: tenantSetting, Err: err}
+	}()
+	go func() {
+		countEventCreated := u.eventRepo.CountCreatedEvent(auth.Tenant.ID)
+		countCh <- countEventCreated
+	}()
+
+	tenantSetting := <-tenantSettingCH
+	if tenantSetting.Err != nil {
 		return nil, appErrors.ErrInternalServer
 	}
 
-	if err = service.CheckMaxEventCanCreated(countEventCreated, tenantSettings); err != nil {
+	if err = service.CheckMaxEventCanCreated(<-countCh, <-tenantSettingCH); err != nil {
 		return nil, appErrors.WrapExpose(err, "Created event quota Has been limit", http.StatusUnprocessableEntity)
 	}
 

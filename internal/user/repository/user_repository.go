@@ -14,6 +14,7 @@ type UserRepository interface {
 	GetAll(query request.UserPaginateParams, tenantID *string) ([]*model.User, int64, error)
 	Update(user *model.User) error
 	Delete(id string) error
+	CountCreatedUser(tenantID string) int
 }
 
 type userRepository struct {
@@ -106,4 +107,12 @@ func FilterUserQuery(query request.UserPaginateParams, tenantID *string) func(*g
 		}
 		return db
 	}
+}
+
+func (r *userRepository) CountCreatedUser(tenantID string) int {
+	var count int64
+	if err := r.DB.Model(model.User{}).Where("tenant_id = ?", tenantID).Count(&count).Error; err != nil {
+		return 0
+	}
+	return int(count)
 }

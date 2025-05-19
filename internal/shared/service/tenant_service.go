@@ -7,8 +7,8 @@ import (
 	"strconv"
 )
 
-func CheckMaxEventCanCreated(countEventCreated int, tenantSetting *modelTenant.TenantSetting) error {
-	maxEvent, _ := strconv.Atoi(tenantSetting.Value)
+func CheckMaxEventCanCreated(countEventCreated int, tenantSetting *modelTenant.TenantSettingChannel) error {
+	maxEvent, _ := strconv.Atoi(tenantSetting.TenantSetting.Value)
 
 	if countEventCreated >= maxEvent {
 

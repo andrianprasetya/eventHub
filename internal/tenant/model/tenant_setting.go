@@ -11,3 +11,8 @@ type TenantSetting struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
+
+type TenantSettingChannel struct {
+	TenantSetting *TenantSetting
+	Err           error
+}
