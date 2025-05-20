@@ -21,3 +21,8 @@ type User struct {
 	UpdatedAt time.Time
 	DeletedAt gorm.DeletedAt `gorm:"index"`
 }
+
+type UserChannel struct {
+	User User
+	Err  error
+}

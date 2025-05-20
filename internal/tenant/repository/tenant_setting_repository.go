@@ -1,13 +1,14 @@
 package repository
 
 import (
+	"context"
 	modelTenant "github.com/andrianprasetya/eventHub/internal/tenant/model"
 	"gorm.io/gorm"
 )
 
 type TenantSettingRepository interface {
 	CreateBulkWithTx(tx *gorm.DB, tenantSettings []*modelTenant.TenantSetting) error
-	GetByTenantID(tenantID, key string) (*modelTenant.TenantSetting, error)
+	GetByTenantID(ctx context.Context, tenantID, key string) (*modelTenant.TenantSetting, error)
 }
 
 type tenantSettingRepository struct {
@@ -22,8 +23,8 @@ func (r *tenantSettingRepository) CreateBulkWithTx(tx *gorm.DB, tenantSettings [
 	return tx.Create(tenantSettings).Error
 }
 
-func (r *tenantSettingRepository) GetByTenantID(tenantID, key string) (*modelTenant.TenantSetting, error) {
+func (r *tenantSettingRepository) GetByTenantID(ctx context.Context, tenantID, key string) (*modelTenant.TenantSetting, error) {
 	var tenantSetting modelTenant.TenantSetting
-	err := r.DB.Find(&tenantSetting).Where("tenant_id = ?", tenantSetting).Where("key = ?", key).Error
+	err := r.DB.WithContext(ctx).Find(&tenantSetting).Where("tenant_id = ?", tenantSetting).Where("key = ?", key).Error
 	return &tenantSetting, err
 }

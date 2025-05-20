@@ -28,12 +28,14 @@ func (r *roleUsecase) GetAll(query request.RolePaginateParams, userAuth middlewa
 
 	if err != nil {
 		log.WithFields(log.Fields{
-			"errors": err,
-		}).Error("failed to get Role")
+			"errors":       err,
+			"role":         userAuth.Role.Slug,
+			"query_params": query,
+		}).Error("failed to get role")
 		return nil, 0, appErrors.ErrInternalServer
 	}
 
-	return mapper.FromRoleToList(roles), total, err
+	return mapper.FromRoleToList(roles), total, nil
 }
 
 func (r *roleUsecase) GetByID(id string) (*response.RoleResponse, error) {
@@ -41,9 +43,10 @@ func (r *roleUsecase) GetByID(id string) (*response.RoleResponse, error) {
 	if err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,
+			"id":     id,
 		}).Error("failed to get Role")
 		return nil, appErrors.ErrInternalServer
 	}
-	return mapper.FromRoleModel(role), err
+	return mapper.FromRoleModel(role), nil
 
 }

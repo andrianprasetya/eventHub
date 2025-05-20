@@ -3,26 +3,18 @@ package usecase
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
 	logRepository "github.com/andrianprasetya/eventHub/internal/audit_security_log/repository"
 	appErrors "github.com/andrianprasetya/eventHub/internal/shared/errors"
 	"github.com/andrianprasetya/eventHub/internal/shared/helper"
 	"github.com/andrianprasetya/eventHub/internal/shared/middleware"
 	repositoryShared "github.com/andrianprasetya/eventHub/internal/shared/repository"
-	responseDTO "github.com/andrianprasetya/eventHub/internal/shared/response"
+	"github.com/andrianprasetya/eventHub/internal/shared/service"
 	"github.com/andrianprasetya/eventHub/internal/shared/utils"
 	"github.com/andrianprasetya/eventHub/internal/user/dto/mapper"
 	"github.com/andrianprasetya/eventHub/internal/user/dto/request"
 	"github.com/andrianprasetya/eventHub/internal/user/dto/response"
-	modelUser "github.com/andrianprasetya/eventHub/internal/user/model"
 	"github.com/andrianprasetya/eventHub/internal/user/repository"
-	appServer "github.com/andrianprasetya/eventHub/server"
-	"github.com/redis/go-redis/v9"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/crypto/bcrypt"
-	"net/http"
-	"time"
 )
 
 type UserUsecase interface {
@@ -61,114 +53,57 @@ func (u *userUsecase) Login(ctx context.Context, req request.LoginRequest, ip st
 	getUser, err := u.userRepo.GetByEmail(req.Email)
 
 	//data tidak ada
-	if getUser == nil {
-		log.Error("User Not found")
-		return nil, appErrors.ErrInvalidCredentials
-	}
-
-	if err != nil {
+	if err != nil || getUser == nil {
 		log.WithFields(log.Fields{
 			"errors": err,
-		}).Error("failed to get Email")
-		return nil, appErrors.ErrInternalServer
-	}
-	getRedisToken, err := appServer.RedisClient.Get(ctx, "user:jwt:"+getUser.ID)
-
-	if getRedisToken != "" {
-		var authUser middleware.AuthUser
-		if err := json.Unmarshal([]byte(getRedisToken), &authUser); err != nil {
-			log.WithFields(log.Fields{
-				"errors": err,
-			}).Error("failed to mapping payload")
-			return nil, appErrors.ErrInternalServer
-		}
-		return &response.LoginResponse{
-			AccessToken:  authUser.Token,
-			Exp:          10 * 60,
-			TokenType:    "Bearer",
-			Username:     req.Email,
-			TenantDomain: getUser.Tenant.Domain,
-		}, nil
-	}
-	if err != nil {
-		if errors.Is(err, redis.Nil) {
-			// Key not found inside redis (don't make it considered fatal)
-			log.Info("Token not found in Redis (might be new login)")
-			getRedisToken = "" // kosongkan jika perlu
-		} else {
-			// Ini error Redis yang lain, misalnya koneksi putus, dsb
-			log.WithFields(log.Fields{
-				"errors": err,
-			}).Error("failed to get token from Redis")
-			return nil, appErrors.ErrInternalServer
-		}
-	}
-
-	if errMatching := bcrypt.CompareHashAndPassword([]byte(getUser.Password), []byte(req.Password)); errMatching != nil {
-		log.WithFields(log.Fields{
-			"errors": errMatching,
-		}).Error("failed to matching password")
+			"email":  req.Email,
+		}).Error("failed to get email")
 		return nil, appErrors.ErrInvalidCredentials
 	}
 
+	// Cek password
+	if err := service.CheckPassword(getUser.Password, req.Password); err != nil {
+		log.WithError(err).Error("invalid password")
+		return nil, appErrors.ErrInvalidCredentials
+	}
+
+	// Cek token redis
+	if cachedUser, err := service.HandleRedisToken(ctx, getUser.ID); err != nil {
+		log.WithError(err).Error("failed to get token from redis")
+		return nil, appErrors.ErrInternalServer
+	} else if cachedUser != nil {
+		return service.BuildLoginResponse(cachedUser), nil
+	}
+
+	// Generate JWT dan mapping payload
 	token, err := utils.GenerateJWT(getUser.ID, req.Email)
-
-	payload := &middleware.AuthUser{
-		ID:    getUser.ID,
-		Name:  getUser.Name,
-		Email: getUser.Email,
-		Tenant: middleware.TenantPayload{
-			ID:       getUser.Tenant.ID,
-			Name:     getUser.Tenant.Name,
-			Email:    getUser.Tenant.Email,
-			LogoUrl:  getUser.Tenant.LogoUrl,
-			Domain:   getUser.Tenant.Domain,
-			IsActive: getUser.Tenant.IsActive,
-		},
-		Role: middleware.RolePayload{
-			ID:          getUser.Role.ID,
-			Name:        getUser.Role.Name,
-			Slug:        getUser.Role.Slug,
-			Description: getUser.Role.Description,
-		},
-		IsActive: getUser.IsActive,
-		Token:    token,
-	}
-	data, _ := json.Marshal(payload)
-	key := "user:jwt:" + getUser.ID
 	if err != nil {
-		log.WithFields(log.Fields{
-			"errors": err,
-		}).Error("failed to generate jwt")
-		return nil, appErrors.ErrInternalServer
-	}
-	_, err = appServer.RedisClient.SetWithExpire(ctx, key, data, 10*time.Minute)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"errors": err,
-		}).Error("failed to save token in redis")
+		log.WithError(err).Error("failed to generate jwt")
 		return nil, appErrors.ErrInternalServer
 	}
 
-	//login login time
+	authPayload := service.MapToAuthUserPayload(getUser, token)
+
+	// Simpan ke Redis
+	if err := service.SaveTokenToRedis(ctx, getUser.ID, authPayload); err != nil {
+		log.WithError(err).Error("failed to save token to redis")
+		return nil, appErrors.ErrInternalServer
+	}
+
+	// Log history login
 	helper.LogLoginHistory(u.logRepo, getUser.ID, ip)
-
-	return &response.LoginResponse{
-		AccessToken:  token,
-		Exp:          10 * 60,
-		TokenType:    "Bearer",
-		Username:     req.Email,
-		TenantDomain: getUser.Tenant.Domain,
-	}, nil
-
+	return service.BuildLoginResponse(authPayload), nil
 }
 
 func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.AuthUser, url string) error {
 	var err error
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+
+	hashedPassword, err := service.HashedPassword(req.Password)
+
 	if err != nil {
 		log.WithFields(log.Fields{
-			"errors": err,
+			"errors":   err,
+			"password": req.Password,
 		}).Error("failed to bcrypt password")
 		return appErrors.ErrInternalServer
 	}
@@ -177,45 +112,34 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.Aut
 
 	if err != nil {
 		log.WithFields(log.Fields{
-			"errors": err,
-		}).Error("failed to get Role")
+			"errors":  err,
+			"role_id": req.RoleID,
+		}).Error("failed to get role")
 		return appErrors.ErrInternalServer
 	}
 
-	user := &modelUser.User{
-		ID:       utils.GenerateID(),
-		TenantID: auth.Tenant.ID,
-		RoleID:   role.ID,
-		Name:     req.Name,
-		Email:    req.Email,
-		Password: string(hashedPassword),
-		IsActive: 1,
-	}
+	user := service.MapUserPayload(auth.Tenant.ID, role.ID, req.Name, req.Email, string(hashedPassword))
 
 	if err = u.userRepo.Create(user); err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,
+			"user":   user,
 		}).Error("failed to create user")
 		return appErrors.ErrInternalServer
 	}
 
-	userLog := responseDTO.UserLog{
-		ID:       user.ID,
-		TenantID: user.TenantID,
-		RoleID:   user.RoleID,
-		Name:     user.Name,
-		Email:    user.Email,
-		IsActive: user.IsActive,
-	}
+	userLog := service.MapUserLog(user)
 
 	userJSON, err := json.Marshal(userLog)
 	if err != nil {
+		log.WithFields(log.Fields{
+			"errors":   err,
+			"user_log": userLog,
+		}).Error("failed to marshal json user log")
 		return appErrors.ErrInternalServer
 	}
 
-	if err == nil {
-		helper.LogActivity(u.activityRepo, auth.Tenant.ID, auth.ID, url, "Create User", string(userJSON), "user", user.ID)
-	}
+	helper.LogActivity(u.activityRepo, auth.Tenant.ID, auth.ID, url, "Create User", string(userJSON), "user", user.ID)
 
 	return nil
 }
@@ -224,11 +148,13 @@ func (u *userUsecase) GetAll(query request.UserPaginateParams, tenantID *string)
 	users, total, err := u.userRepo.GetAll(query, tenantID)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"errors": err,
+			"errors":       err,
+			"query_params": query,
+			"tenant_id":    tenantID,
 		}).Error("failed to get users")
-		return nil, 0, appErrors.Wrap(err, "Internal server Error", http.StatusInternalServerError)
+		return nil, 0, appErrors.ErrInternalServer
 	}
-	return mapper.FromUserToList(users), total, err
+	return mapper.FromUserToList(users), total, nil
 }
 
 func (u *userUsecase) GetByID(id string) (*response.UserResponse, error) {
@@ -236,10 +162,11 @@ func (u *userUsecase) GetByID(id string) (*response.UserResponse, error) {
 	if err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,
-		}).Error("failed to get users")
-		return nil, appErrors.Wrap(err, "Internal server Error", http.StatusInternalServerError)
+			"id":     id,
+		}).Error("failed to get user")
+		return nil, appErrors.ErrInternalServer
 	}
-	return mapper.FromUserModel(user), err
+	return mapper.FromUserModel(user), nil
 }
 
 func (u *userUsecase) Update(req request.UpdateUserRequest, id string) error {
@@ -247,8 +174,9 @@ func (u *userUsecase) Update(req request.UpdateUserRequest, id string) error {
 	if err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,
+			"id":     id,
 		}).Error("failed to get user")
-		return fmt.Errorf("something Went wrong %w", err)
+		return appErrors.ErrInternalServer
 	}
 
 	if req.RoleID != nil {
@@ -260,9 +188,10 @@ func (u *userUsecase) Update(req request.UpdateUserRequest, id string) error {
 
 	if err := u.userRepo.Update(user); err != nil {
 		log.WithFields(log.Fields{
-			"errors": err,
-		}).Error("failed to create user")
-		return fmt.Errorf("something Went wrong %w", err)
+			"errors":   err,
+			"req_user": req,
+		}).Error("failed to update user")
+		return appErrors.ErrInternalServer
 	}
 
 	return nil
@@ -273,8 +202,9 @@ func (u *userUsecase) Delete(id string) error {
 	if err := u.userRepo.Delete(id); err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,
+			"id":     id,
 		}).Error("failed to delete user")
-		return fmt.Errorf("something Went wrong %w", err)
+		return appErrors.ErrInternalServer
 	}
 	return nil
 }

@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"context"
 	"encoding/json"
 	logRepository "github.com/andrianprasetya/eventHub/internal/audit_security_log/repository"
 	"github.com/andrianprasetya/eventHub/internal/event/dto/mapper"
@@ -21,6 +22,7 @@ import (
 	repositoryTicket "github.com/andrianprasetya/eventHub/internal/ticket/repository"
 	log "github.com/sirupsen/logrus"
 	"net/http"
+	"time"
 )
 
 type EventUsecase interface {
@@ -67,42 +69,55 @@ func NewEventUsecase(
 }
 
 func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.AuthUser, url string) (*response.EventResponse, error) {
-
 	tx := u.txManager.Begin()
 
 	var err error
-	var tenantSettingCH = make(chan *modelTenant.TenantSettingChannel)
-	var countCh = make(chan int)
+	var tenantSettingCH = make(chan *modelTenant.TenantSettingChannel, 1)
+	var countCh = make(chan *helper.CountEventResult, 1)
+	var unlimitedEventCh = make(chan *helper.UnlimitedResult, 1)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
 
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
-			log.WithFields(log.Fields{
-				"errors": r,
-			}).Error("Failed to create event  (panic recovered)")
-			err = appErrors.ErrInternalServer
-		} else if err != nil {
-			tx.Rollback()
+			log.WithFields(log.Fields{"error": r}).Error("Recovered from panic in CreateEvent")
 		}
 	}()
+
 	go func() {
-		tenantSetting, err := u.tenantSettingRepo.GetByTenantID(auth.Tenant.ID, "max_events")
-		tenantSettingCH <- &modelTenant.TenantSettingChannel{TenantSetting: tenantSetting, Err: err}
+		unlimitedEvent, err := u.tenantSettingRepo.GetByTenantID(ctx, auth.Tenant.ID, "unlimited_events")
+		unlimitedEventCh <- &helper.UnlimitedResult{Value: unlimitedEvent.Value, Err: err}
 	}()
 	go func() {
-		countEventCreated := u.eventRepo.CountCreatedEvent(auth.Tenant.ID)
-		countCh <- countEventCreated
+		tenantSetting, err := u.tenantSettingRepo.GetByTenantID(ctx, auth.Tenant.ID, "max_events")
+		tenantSettingCH <- &modelTenant.TenantSettingChannel{TenantSetting: tenantSetting, Err: err}
+
+	}()
+	go func() {
+		countEventCreated, err := u.eventRepo.CountCreatedEvent(ctx, auth.Tenant.ID)
+		countCh <- &helper.CountEventResult{Count: countEventCreated, Err: err}
 	}()
 
 	tenantSetting := <-tenantSettingCH
 	if tenantSetting.Err != nil {
 		return nil, appErrors.ErrInternalServer
 	}
-
-	if err = service.CheckMaxEventCanCreated(<-countCh, <-tenantSettingCH); err != nil {
-		return nil, appErrors.WrapExpose(err, "Created event quota Has been limit", http.StatusUnprocessableEntity)
+	count := <-countCh
+	if count.Err != nil {
+		return nil, appErrors.ErrInternalServer
+	}
+	unlimitedEvent := <-unlimitedEventCh
+	if unlimitedEvent.Err != nil {
+		return nil, appErrors.ErrInternalServer
 	}
 
+	if unlimitedEvent.Value == "false" {
+		if err = service.CheckMaxEventCanCreated(count.Count, tenantSetting); err != nil {
+			return nil, appErrors.WrapExpose(err, "Created event quota Has been limit", http.StatusUnprocessableEntity)
+		}
+	}
 	event := &model.Event{
 		ID:          utils.GenerateID(),
 		Title:       req.Title,

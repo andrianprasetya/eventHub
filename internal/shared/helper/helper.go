@@ -10,6 +10,16 @@ import (
 	"time"
 )
 
+type CountEventResult struct {
+	Count int
+	Err   error
+}
+
+type UnlimitedResult struct {
+	Value string
+	Err   error
+}
+
 func LogLoginHistory(repo repository.LoginHistoryRepository, userId, ip string) {
 
 	log := &model.LoginHistory{
