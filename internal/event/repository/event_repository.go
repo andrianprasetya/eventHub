@@ -8,9 +8,9 @@ import (
 )
 
 type EventRepository interface {
-	Create(tx *gorm.DB, event *model.Event) error
-	GetAll(query request.EventPaginateRequest, tenantID *string) ([]*model.Event, int64, error)
-	GetByID(id string) (*model.Event, error)
+	Create(ctx context.Context, tx *gorm.DB, event *model.Event) error
+	GetAll(ctx context.Context, query request.EventPaginateRequest, tenantID *string) ([]*model.Event, int64, error)
+	GetByID(ctx context.Context, id string) (*model.Event, error)
 	CountCreatedEvent(ctx context.Context, tenantID string) (int, error)
 }
 
@@ -22,15 +22,15 @@ func NewEventRepository(db *gorm.DB) EventRepository {
 	return &eventRepository{DB: db}
 }
 
-func (r *eventRepository) Create(tx *gorm.DB, event *model.Event) error {
-	return tx.Create(event).Error
+func (r *eventRepository) Create(ctx context.Context, tx *gorm.DB, event *model.Event) error {
+	return tx.WithContext(ctx).Create(event).Error
 }
 
-func (r *eventRepository) GetAll(query request.EventPaginateRequest, tenantID *string) ([]*model.Event, int64, error) {
+func (r *eventRepository) GetAll(ctx context.Context, query request.EventPaginateRequest, tenantID *string) ([]*model.Event, int64, error) {
 	var events []*model.Event
 	var total int64
 
-	db := r.DB.Model(&model.Event{})
+	db := r.DB.WithContext(ctx).Model(&model.Event{})
 
 	if query.Name != nil {
 		db = db.Where("name ILIKE ?", "%"+*query.Name+"%")
@@ -51,9 +51,9 @@ func (r *eventRepository) GetAll(query request.EventPaginateRequest, tenantID *s
 	return events, total, nil
 }
 
-func (r *eventRepository) GetByID(id string) (*model.Event, error) {
+func (r *eventRepository) GetByID(ctx context.Context, id string) (*model.Event, error) {
 	var event model.Event
-	if err := r.DB.First(&event, "id = ?", id).Error; err != nil {
+	if err := r.DB.WithContext(ctx).First(&event, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
 	return &event, nil

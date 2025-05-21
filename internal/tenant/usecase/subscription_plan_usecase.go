@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"fmt"
 	appErrors "github.com/andrianprasetya/eventHub/internal/shared/errors"
 	"github.com/andrianprasetya/eventHub/internal/shared/service"
 	"github.com/andrianprasetya/eventHub/internal/shared/utils"
@@ -60,7 +59,7 @@ func (u *subscriptionPlanUsecase) GetAll(query request.SubscriptionPaginateParam
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to get subscription plan")
-		return nil, 0, fmt.Errorf("something Went wrong %w", err)
+		return nil, 0, appErrors.ErrInternalServer
 	}
 
 	return mapper.FromSubscriptionPlanToList(subscriptionPlan), total, err
@@ -75,7 +74,7 @@ func (u *subscriptionPlanUsecase) Update(id string, req request.UpdateSubscripti
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to get subscription plan")
-		return &response.SubscriptionPlanResponse{}, fmt.Errorf("something Went wrong")
+		return nil, appErrors.ErrInternalServer
 	}
 	if req.Name != nil {
 		subscriptionPlan.Name = *req.Name

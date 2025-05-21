@@ -1,12 +1,13 @@
 package repository
 
 import (
+	"context"
 	"github.com/andrianprasetya/eventHub/internal/ticket/model"
 	"gorm.io/gorm"
 )
 
 type TicketRepository interface {
-	CreateBulkWithTx(tx *gorm.DB, ticket []*model.EventTicket) error
+	CreateBulkWithTx(ctx context.Context, tx *gorm.DB, ticket []*model.EventTicket) error
 }
 
 type ticketRepository struct {
@@ -17,6 +18,6 @@ func NewTicketRepository(db *gorm.DB) TicketRepository {
 	return &ticketRepository{DB: db}
 }
 
-func (r *ticketRepository) CreateBulkWithTx(tx *gorm.DB, ticket []*model.EventTicket) error {
-	return tx.Create(ticket).Error
+func (r *ticketRepository) CreateBulkWithTx(ctx context.Context, tx *gorm.DB, ticket []*model.EventTicket) error {
+	return tx.WithContext(ctx).Create(ticket).Error
 }

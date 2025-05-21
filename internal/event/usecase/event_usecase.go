@@ -7,21 +7,19 @@ import (
 	"github.com/andrianprasetya/eventHub/internal/event/dto/mapper"
 	"github.com/andrianprasetya/eventHub/internal/event/dto/request"
 	"github.com/andrianprasetya/eventHub/internal/event/dto/response"
-	"github.com/andrianprasetya/eventHub/internal/event/model"
 	"github.com/andrianprasetya/eventHub/internal/event/repository"
 	appErrors "github.com/andrianprasetya/eventHub/internal/shared/errors"
 	"github.com/andrianprasetya/eventHub/internal/shared/helper"
 	"github.com/andrianprasetya/eventHub/internal/shared/middleware"
 	repositoryShared "github.com/andrianprasetya/eventHub/internal/shared/repository"
-	responseDTO "github.com/andrianprasetya/eventHub/internal/shared/response"
 	"github.com/andrianprasetya/eventHub/internal/shared/service"
-	"github.com/andrianprasetya/eventHub/internal/shared/utils"
 	modelTenant "github.com/andrianprasetya/eventHub/internal/tenant/model"
-	repositoruTenant "github.com/andrianprasetya/eventHub/internal/tenant/repository"
-	modelTicket "github.com/andrianprasetya/eventHub/internal/ticket/model"
+	repositoryTenant "github.com/andrianprasetya/eventHub/internal/tenant/repository"
 	repositoryTicket "github.com/andrianprasetya/eventHub/internal/ticket/repository"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 	"net/http"
+	"runtime/debug"
 	"time"
 )
 
@@ -35,7 +33,7 @@ type EventUsecase interface {
 
 type eventUsecase struct {
 	txManager         repositoryShared.TxManager
-	tenantSettingRepo repositoruTenant.TenantSettingRepository
+	tenantSettingRepo repositoryTenant.TenantSettingRepository
 	eventRepo         repository.EventRepository
 	eventTagRepo      repository.EventTagRepository
 	eventCategoryRepo repository.EventCategoryRepository
@@ -47,7 +45,7 @@ type eventUsecase struct {
 
 func NewEventUsecase(
 	txManager repositoryShared.TxManager,
-	tenantSettingRepo repositoruTenant.TenantSettingRepository,
+	tenantSettingRepo repositoryTenant.TenantSettingRepository,
 	eventRepo repository.EventRepository,
 	eventTagRepo repository.EventTagRepository,
 	eventCategoryRepo repository.EventCategoryRepository,
@@ -69,166 +67,157 @@ func NewEventUsecase(
 }
 
 func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.AuthUser, url string) (*response.EventResponse, error) {
-	tx := u.txManager.Begin()
-
-	var err error
-	var tenantSettingCH = make(chan *modelTenant.TenantSettingChannel, 1)
-	var countCh = make(chan *helper.CountEventResult, 1)
-	var unlimitedEventCh = make(chan *helper.UnlimitedResult, 1)
-
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
+
+	var err error
+	var (
+		tenantSetting     *modelTenant.TenantSetting
+		countEventCreated int
+		unlimitedEvent    string
+	)
+
+	g, gctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		getUnlimitedEvent, err := u.tenantSettingRepo.GetByTenantID(gctx, auth.Tenant.ID, "unlimited_events")
+		if err != nil {
+			return err
+		}
+		unlimitedEvent = getUnlimitedEvent.Value
+		return nil
+	})
+
+	g.Go(func() error {
+		getTenantSetting, err := u.tenantSettingRepo.GetByTenantID(ctx, auth.Tenant.ID, "max_events")
+		if err != nil {
+			return err
+		}
+		tenantSetting = getTenantSetting
+		return nil
+	})
+
+	g.Go(func() error {
+		getEventHasCreated, err := u.eventRepo.CountCreatedEvent(ctx, auth.Tenant.ID)
+		if err != nil {
+			return err
+		}
+		countEventCreated = getEventHasCreated
+		return nil
+	})
+	if err = g.Wait(); err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("failed to fetch plan or role")
+		return nil, appErrors.WrapExpose(err, "failed to fetch plan or role", http.StatusInternalServerError)
+	}
+
+	tx := u.txManager.Begin(ctx)
 
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
-			log.WithFields(log.Fields{"error": r}).Error("Recovered from panic in CreateEvent")
+			log.WithFields(log.Fields{
+				"error": r,
+				"stack": string(debug.Stack()),
+			}).Error("Recovered from panic in CreateEvent")
+			err = appErrors.ErrInternalServer
 		}
 	}()
 
-	go func() {
-		unlimitedEvent, err := u.tenantSettingRepo.GetByTenantID(ctx, auth.Tenant.ID, "unlimited_events")
-		unlimitedEventCh <- &helper.UnlimitedResult{Value: unlimitedEvent.Value, Err: err}
-	}()
-	go func() {
-		tenantSetting, err := u.tenantSettingRepo.GetByTenantID(ctx, auth.Tenant.ID, "max_events")
-		tenantSettingCH <- &modelTenant.TenantSettingChannel{TenantSetting: tenantSetting, Err: err}
-
-	}()
-	go func() {
-		countEventCreated, err := u.eventRepo.CountCreatedEvent(ctx, auth.Tenant.ID)
-		countCh <- &helper.CountEventResult{Count: countEventCreated, Err: err}
-	}()
-
-	tenantSetting := <-tenantSettingCH
-	if tenantSetting.Err != nil {
-		return nil, appErrors.ErrInternalServer
-	}
-	count := <-countCh
-	if count.Err != nil {
-		return nil, appErrors.ErrInternalServer
-	}
-	unlimitedEvent := <-unlimitedEventCh
-	if unlimitedEvent.Err != nil {
-		return nil, appErrors.ErrInternalServer
-	}
-
-	if unlimitedEvent.Value == "false" {
-		if err = service.CheckMaxEventCanCreated(count.Count, tenantSetting); err != nil {
+	if unlimitedEvent == "false" {
+		if err = service.CheckMaxEventCanCreated(countEventCreated, tenantSetting); err != nil {
 			return nil, appErrors.WrapExpose(err, "Created event quota Has been limit", http.StatusUnprocessableEntity)
 		}
 	}
-	event := &model.Event{
-		ID:          utils.GenerateID(),
-		Title:       req.Title,
-		TenantID:    auth.Tenant.ID,
-		CategoryID:  req.CategoryID,
-		EventType:   req.EventType,
-		Tags:        req.Tags,
-		Description: req.Description,
-		Location:    req.Location,
-		StartDate:   req.StartDate,
-		EndDate:     req.EndDate,
-		CreatedBy:   auth.ID,
-		IsTicket:    req.IsTicket,
-		Status:      req.Status,
+	event, err := service.MapEventPayload(auth, req)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"errors":  err,
+			"auth":    auth,
+			"request": req,
+		})
+		return nil, appErrors.ErrInternalServer
 	}
 
-	if err = u.eventRepo.Create(tx, event); err != nil {
+	if err = u.eventRepo.Create(ctx, tx, event); err != nil {
+		tx.Rollback()
 		log.WithFields(log.Fields{
 			"errors": err,
+			"event":  event,
 		}).Error("failed to create event")
 		return nil, appErrors.ErrInternalServer
 	}
 
-	if err = u.eventCategoryRepo.AddCategoryToEventWithTx(tx, event.ID, event); err != nil {
+	if err = u.eventCategoryRepo.AddCategoryToEventWithTx(ctx, tx, event); err != nil {
+		tx.Rollback()
 		log.WithFields(log.Fields{
 			"errors": err,
+			"event":  event,
 		}).Error("failed to add category to event")
 		return nil, appErrors.ErrInternalServer
 	}
 
-	var eventTickets []*modelTicket.EventTicket
-	for _, ticket := range req.Tickets {
-		eventTickets = append(eventTickets, &modelTicket.EventTicket{
-			ID:         utils.GenerateID(),
-			EventID:    event.ID,
-			TicketType: ticket.Type,
-			Price:      ticket.Price,
-			Quantity:   ticket.Quantity,
-		})
-	}
+	eventTickets := service.MapEventTicket(event.ID, req.Tickets)
 
-	if err = u.ticketRepo.CreateBulkWithTx(tx, eventTickets); err != nil {
+	if err = u.ticketRepo.CreateBulkWithTx(ctx, tx, eventTickets); err != nil {
+		tx.Rollback()
 		log.WithFields(log.Fields{
-			"errors": err,
+			"errors":       err,
+			"event_ticket": eventTickets,
 		}).Error("failed to create ticket")
 		return nil, appErrors.ErrInternalServer
 	}
 
-	var discounts []*modelTicket.Discount
-	for _, discount := range req.Discounts {
-		discounts = append(discounts, &modelTicket.Discount{
-			ID:                 utils.GenerateID(),
-			EventID:            event.ID,
-			Code:               discount.Code,
-			DiscountPercentage: discount.DiscountPercentage,
-			StartDate:          discount.StartDate,
-			EndDate:            discount.EndDate,
-		})
-	}
-
-	if err = u.discountRepo.CreateBulkWithTx(tx, discounts); err != nil {
+	discounts := service.MapDiscountsPayload(event.ID, req.Discounts)
+	if err = u.discountRepo.CreateBulkWithTx(ctx, tx, discounts); err != nil {
+		tx.Rollback()
 		log.WithFields(log.Fields{
-			"errors": err,
+			"errors":    err,
+			"discounts": discounts,
 		}).Error("failed to create discount ticket")
 		return nil, appErrors.ErrInternalServer
 	}
 
-	var sessions []*model.EventSession
-	for _, session := range req.Sessions {
-		sessions = append(sessions, &model.EventSession{
-			ID:            utils.GenerateID(),
-			EventID:       event.ID,
-			Title:         session.Title,
-			StartDateTime: session.StartDateTime,
-			EndDateTime:   session.EndDateTime,
-		})
-	}
+	sessions := service.MapEventServicesPayload(event.ID, req.Sessions)
 
-	if err = u.eventSessionRepo.CreateBulkWithTx(tx, sessions); err != nil {
+	if err = u.eventSessionRepo.CreateBulkWithTx(ctx, tx, sessions); err != nil {
+		tx.Rollback()
 		log.WithFields(log.Fields{
-			"errors": err,
+			"errors":   err,
+			"sessions": sessions,
 		}).Error("failed to create event session")
 		return nil, appErrors.ErrInternalServer
 	}
 
-	userLog := responseDTO.EventLog{
-		ID:          event.ID,
-		TenantID:    event.TenantID,
-		Description: event.Description,
-		Location:    *event.Location,
-		StartDate:   event.StartDate,
-		EndDate:     event.EndDate,
-	}
-
-	userJSON, errMarshal := json.Marshal(userLog)
+	userJSON, errMarshal := json.Marshal(event)
 	if errMarshal != nil {
+		tx.Rollback()
+		log.WithFields(log.Fields{
+			"errors":    err,
+			"event_log": event,
+		}).Error("failed to create event session")
 		return nil, appErrors.ErrInternalServer
 	}
-	err = tx.Commit().Error
-	if err == nil {
-		helper.LogActivity(u.activityRepo, auth.Tenant.ID, auth.ID, url, "Create Event", string(userJSON), "event", event.ID)
+	if err = tx.Commit().Error; err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("failed to commit transaction")
+		tx.Rollback()
+		return nil, appErrors.ErrInternalServer
 	}
+	helper.LogActivity(u.activityRepo, ctx, auth.Tenant.ID, auth.ID, url, "Create Event", string(userJSON), "event", event.ID)
 
-	return mapper.FromEventModel(event), err
+	return mapper.FromEventModel(event), nil
 }
 
 func (u *eventUsecase) GetTags(query request.EventTagPaginateRequest, tenantID *string) ([]*response.EventTagListItemResponse, int64, error) {
-	eventTags, total, err := u.eventTagRepo.GetAll(query, tenantID)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	eventTags, total, err := u.eventTagRepo.GetAll(ctx, query, tenantID)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"errors": err,
+			"errors":       err,
+			"query_params": query,
+			"tenant_id":    tenantID,
 		}).Error("failed to get tags")
 		return nil, 0, appErrors.ErrInternalServer
 	}
@@ -236,10 +225,14 @@ func (u *eventUsecase) GetTags(query request.EventTagPaginateRequest, tenantID *
 	return mapper.FromEventTagToList(eventTags), total, err
 }
 func (u *eventUsecase) GetCategories(query request.EventCategoryPaginateRequest, tenantID *string) ([]*response.EventCategoryListItemResponse, int64, error) {
-	eventCategories, total, err := u.eventCategoryRepo.GetAll(query, tenantID)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	eventCategories, total, err := u.eventCategoryRepo.GetAll(ctx, query, tenantID)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"errors": err,
+			"errors":       err,
+			"query_params": query,
+			"tenant_id":    tenantID,
 		}).Error("failed to get categories")
 		return nil, 0, appErrors.ErrInternalServer
 	}
@@ -248,10 +241,14 @@ func (u *eventUsecase) GetCategories(query request.EventCategoryPaginateRequest,
 }
 
 func (u *eventUsecase) GetAll(query request.EventPaginateRequest, tenantID *string) ([]*response.EventListItemResponse, int64, error) {
-	events, total, err := u.eventRepo.GetAll(query, tenantID)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	events, total, err := u.eventRepo.GetAll(ctx, query, tenantID)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"errors": err,
+			"errors":       err,
+			"query_params": query,
+			"tenant_id":    tenantID,
 		}).Error("failed to get categories")
 		return nil, 0, appErrors.ErrInternalServer
 	}
@@ -260,10 +257,13 @@ func (u *eventUsecase) GetAll(query request.EventPaginateRequest, tenantID *stri
 }
 
 func (u *eventUsecase) GetByID(id string) (*response.EventResponse, error) {
-	event, err := u.eventRepo.GetByID(id)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	event, err := u.eventRepo.GetByID(ctx, id)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,
+			"id":     id,
 		}).Error("failed to get categories")
 		return nil, appErrors.ErrInternalServer
 	}

@@ -15,7 +15,7 @@ type UserRepository interface {
 	GetAll(ctx context.Context, query request.UserPaginateParams, tenantID *string) ([]*model.User, int64, error)
 	Update(ctx context.Context, user *model.User) error
 	Delete(ctx context.Context, id string) error
-	CountCreatedUser(ctx context.Context, tenantID string) int
+	CountCreatedUser(ctx context.Context, tenantID string) (int, error)
 }
 
 type userRepository struct {
@@ -84,12 +84,10 @@ func (r *userRepository) Delete(ctx context.Context, id string) error {
 	return r.DB.WithContext(ctx).Where("id = ?", id).Delete(&model.User{}).Error
 }
 
-func (r *userRepository) CountCreatedUser(ctx context.Context, tenantID string) int {
+func (r *userRepository) CountCreatedUser(ctx context.Context, tenantID string) (int, error) {
 	var count int64
-	if err := r.DB.WithContext(ctx).Model(model.User{}).Where("tenant_id = ?", tenantID).Count(&count).Error; err != nil {
-		return 0
-	}
-	return int(count)
+	err := r.DB.WithContext(ctx).Model(model.User{}).Where("tenant_id = ?", tenantID).Count(&count).Error
+	return int(count), err
 }
 
 func FilterUserQuery(query request.UserPaginateParams, tenantID *string) func(*gorm.DB) *gorm.DB {

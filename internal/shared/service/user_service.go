@@ -98,13 +98,12 @@ func SaveTokenToRedis(ctx context.Context, userID string, payload *middleware.Au
 	return err
 }
 
-func CheckMaxUserCanCreated(countUserCreated int, tenantSetting *modelTenant.TenantSettingChannel) error {
-	maxEvent, _ := strconv.Atoi(tenantSetting.TenantSetting.Value)
+func CheckMaxUserCanCreated(countUserCreated int, tenantSetting *modelTenant.TenantSetting) error {
+	maxUser, _ := strconv.Atoi(tenantSetting.Value)
 
-	if countUserCreated >= maxEvent {
-
+	if countUserCreated >= maxUser {
 		return validation.ValidationError{
-			"event_limit": fmt.Sprintf("your subscription package not able create event more than %d", maxEvent),
+			"user_limit": fmt.Sprintf("your subscription package not able create user more than %d", maxUser),
 		}
 	}
 	return nil

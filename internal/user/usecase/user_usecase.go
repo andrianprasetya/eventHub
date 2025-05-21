@@ -10,11 +10,16 @@ import (
 	repositoryShared "github.com/andrianprasetya/eventHub/internal/shared/repository"
 	"github.com/andrianprasetya/eventHub/internal/shared/service"
 	"github.com/andrianprasetya/eventHub/internal/shared/utils"
+	modelTenant "github.com/andrianprasetya/eventHub/internal/tenant/model"
+	repositoryTenant "github.com/andrianprasetya/eventHub/internal/tenant/repository"
 	"github.com/andrianprasetya/eventHub/internal/user/dto/mapper"
 	"github.com/andrianprasetya/eventHub/internal/user/dto/request"
 	"github.com/andrianprasetya/eventHub/internal/user/dto/response"
+	modelUser "github.com/andrianprasetya/eventHub/internal/user/model"
 	"github.com/andrianprasetya/eventHub/internal/user/repository"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
+	"net/http"
 	"time"
 )
 
@@ -28,25 +33,28 @@ type UserUsecase interface {
 }
 
 type userUsecase struct {
-	txManager    repositoryShared.TxManager
-	userRepo     repository.UserRepository
-	roleRepo     repository.RoleRepository
-	logRepo      logRepository.LoginHistoryRepository
-	activityRepo logRepository.LogActivityRepository
+	txManager         repositoryShared.TxManager
+	userRepo          repository.UserRepository
+	roleRepo          repository.RoleRepository
+	tenantSettingRepo repositoryTenant.TenantSettingRepository
+	logRepo           logRepository.LoginHistoryRepository
+	activityRepo      logRepository.LogActivityRepository
 }
 
 func NewUserUsecase(
 	txManager repositoryShared.TxManager,
 	userRepo repository.UserRepository,
 	roleRepo repository.RoleRepository,
+	tenantSettingRepo repositoryTenant.TenantSettingRepository,
 	logRepo logRepository.LoginHistoryRepository,
 	activityRepo logRepository.LogActivityRepository) UserUsecase {
 	return &userUsecase{
-		userRepo:     userRepo,
-		roleRepo:     roleRepo,
-		logRepo:      logRepo,
-		activityRepo: activityRepo,
-		txManager:    txManager,
+		userRepo:          userRepo,
+		roleRepo:          roleRepo,
+		logRepo:           logRepo,
+		tenantSettingRepo: tenantSettingRepo,
+		activityRepo:      activityRepo,
+		txManager:         txManager,
 	}
 }
 
@@ -101,6 +109,63 @@ func (u *userUsecase) Login(req request.LoginRequest, ip string) (*response.Logi
 func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.AuthUser, url string) (err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
+	var (
+		tenantSetting    *modelTenant.TenantSetting
+		countUserCreated int
+		unlimitedUser    string
+		role             *modelUser.Role
+	)
+
+	g, gctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		getUnlimitedUser, err := u.tenantSettingRepo.GetByTenantID(gctx, auth.Tenant.ID, "unlimited_users")
+		if err != nil {
+			return err
+		}
+		unlimitedUser = getUnlimitedUser.Value
+		return nil
+	})
+
+	g.Go(func() error {
+		getTenantSetting, err := u.tenantSettingRepo.GetByTenantID(ctx, auth.Tenant.ID, "max_users")
+		if err != nil {
+			return err
+		}
+		tenantSetting = getTenantSetting
+		return nil
+	})
+
+	g.Go(func() error {
+		getUserHasCreated, err := u.userRepo.CountCreatedUser(ctx, auth.Tenant.ID)
+		if err != nil {
+			return err
+		}
+		countUserCreated = getUserHasCreated
+		return nil
+	})
+
+	g.Go(func() error {
+		getRole, err := u.roleRepo.GetByID(ctx, req.RoleID)
+		if err != nil {
+			return err
+		}
+		role = getRole
+		return nil
+	})
+
+	if err = g.Wait(); err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("failed to fetch plan or role")
+		return appErrors.WrapExpose(err, "failed to fetch plan or role", http.StatusInternalServerError)
+	}
+
+	if unlimitedUser == "false" {
+		if err = service.CheckMaxUserCanCreated(countUserCreated, tenantSetting); err != nil {
+			return appErrors.WrapExpose(err, "Created user quota Has been limit", http.StatusUnprocessableEntity)
+		}
+	}
 
 	hashedPassword, err := service.HashedPassword(req.Password)
 
@@ -109,16 +174,6 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.Aut
 			"errors":   err,
 			"password": req.Password,
 		}).Error("failed to bcrypt password")
-		return appErrors.ErrInternalServer
-	}
-
-	role, err := u.roleRepo.GetByID(ctx, req.RoleID)
-
-	if err != nil {
-		log.WithFields(log.Fields{
-			"errors":  err,
-			"role_id": req.RoleID,
-		}).Error("failed to get role")
 		return appErrors.ErrInternalServer
 	}
 
@@ -132,13 +187,11 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.Aut
 		return appErrors.ErrInternalServer
 	}
 
-	userLog := service.MapUserLog(user)
-
-	userJSON, err := json.Marshal(userLog)
+	userJSON, err := json.Marshal(user)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"errors":   err,
-			"user_log": userLog,
+			"user_log": user,
 		}).Error("failed to marshal json user log")
 		return appErrors.ErrInternalServer
 	}

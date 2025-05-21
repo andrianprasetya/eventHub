@@ -20,8 +20,8 @@ func MapTenantPayload(request request.CreateTenantRequest) *modelTenant.Tenant {
 	}
 }
 
-func CheckMaxEventCanCreated(countEventCreated int, tenantSetting *modelTenant.TenantSettingChannel) error {
-	maxEvent, _ := strconv.Atoi(tenantSetting.TenantSetting.Value)
+func CheckMaxEventCanCreated(countEventCreated int, tenantSetting *modelTenant.TenantSetting) error {
+	maxEvent, _ := strconv.Atoi(tenantSetting.Value)
 
 	if countEventCreated >= maxEvent {
 

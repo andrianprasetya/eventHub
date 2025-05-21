@@ -1,7 +1,10 @@
 package service
 
 import (
+	"errors"
+	request2 "github.com/andrianprasetya/eventHub/internal/event/dto/request"
 	modelEvent "github.com/andrianprasetya/eventHub/internal/event/model"
+	"github.com/andrianprasetya/eventHub/internal/shared/middleware"
 	"github.com/andrianprasetya/eventHub/internal/shared/utils"
 )
 
@@ -43,26 +46,54 @@ var tags = []string{
 	"Photography",
 }
 
-func BulkCategories(tenantID string) *[]modelEvent.EventCategory {
-	var eventCategories []modelEvent.EventCategory
-	for _, t := range categories {
-		eventCategories = append(eventCategories, modelEvent.EventCategory{
-			ID:       utils.GenerateID(),
-			TenantID: tenantID,
-			Name:     t,
-		})
+func MapEventPayload(authUser interface{}, request interface{}) (*modelEvent.Event, error) {
+	//type assertion if auth interface have a value AuthUser is true
+	auth, ok := authUser.(middleware.AuthUser)
+	if !ok {
+		return nil, errors.New("mapping event payload failed")
 	}
-	return &eventCategories
+	req, ok := request.(request2.CreateEventRequest)
+	if !ok {
+		return nil, errors.New("mapping event payload failed")
+	}
+
+	return &modelEvent.Event{
+		ID:          utils.GenerateID(),
+		Title:       req.Title,
+		TenantID:    auth.Tenant.ID,
+		CategoryID:  req.CategoryID,
+		EventType:   req.EventType,
+		Tags:        req.Tags,
+		Description: req.Description,
+		Location:    req.Location,
+		StartDate:   req.StartDate,
+		EndDate:     req.EndDate,
+		CreatedBy:   auth.ID,
+		IsTicket:    req.IsTicket,
+		Status:      req.Status,
+	}, nil
 }
 
-func BulkTags(tenantID string) *[]modelEvent.EventTag {
-	var eventTags []modelEvent.EventTag
-	for _, t := range tags {
-		eventTags = append(eventTags, modelEvent.EventTag{
+func BulkCategories(tenantID string) []*modelEvent.EventCategory {
+	eventCategories := make([]*modelEvent.EventCategory, 0, len(categories))
+	for _, t := range categories {
+		eventCategories = append(eventCategories, &modelEvent.EventCategory{
 			ID:       utils.GenerateID(),
 			TenantID: tenantID,
 			Name:     t,
 		})
 	}
-	return &eventTags
+	return eventCategories
+}
+
+func BulkTags(tenantID string) []*modelEvent.EventTag {
+	eventTags := make([]*modelEvent.EventTag, 0, len(tags))
+	for _, t := range tags {
+		eventTags = append(eventTags, &modelEvent.EventTag{
+			ID:       utils.GenerateID(),
+			TenantID: tenantID,
+			Name:     t,
+		})
+	}
+	return eventTags
 }

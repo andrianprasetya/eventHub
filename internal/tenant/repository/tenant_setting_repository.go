@@ -25,6 +25,6 @@ func (r *tenantSettingRepository) CreateBulkWithTx(ctx context.Context, tx *gorm
 
 func (r *tenantSettingRepository) GetByTenantID(ctx context.Context, tenantID, key string) (*modelTenant.TenantSetting, error) {
 	var tenantSetting modelTenant.TenantSetting
-	err := r.DB.WithContext(ctx).Find(&tenantSetting).Where("tenant_id = ?", tenantSetting).Where("key = ?", key).Error
+	err := r.DB.WithContext(ctx).Where("tenant_id = ?", tenantID).Where("key = ?", key).First(&tenantSetting).Error
 	return &tenantSetting, err
 }

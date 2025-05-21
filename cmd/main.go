@@ -62,7 +62,7 @@ func main() {
 		eventTagRepo,
 		eventCategoryRepo)
 	subscriptionPlanUC := tenantUsecase.NewSubscriptionPlanUsecase(subscriptionPlanRepo)
-	userUC := userUsecase.NewUserUsecase(txManager, userRepo, roleRepo, loginHistoryRepo, logActivityRepo)
+	userUC := userUsecase.NewUserUsecase(txManager, userRepo, roleRepo, tenantSettingRepo, loginHistoryRepo, logActivityRepo)
 	roleUC := userUsecase.NewRoleUsecase(roleRepo)
 	eventUC := eventUsecase.NewEventUsecase(
 		txManager,

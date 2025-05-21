@@ -8,10 +8,10 @@ import (
 )
 
 type EventCategoryRepository interface {
-	Create(eventCategory *model.EventCategory) error
-	CreateBulkWithTx(ctx context.Context, tx *gorm.DB, eventCategories *[]model.EventCategory) error
-	AddCategoryToEventWithTx(tx *gorm.DB, id string, event *model.Event) error
-	GetAll(query request.EventCategoryPaginateRequest, tenantID *string) ([]*model.EventCategory, int64, error)
+	Create(ctx context.Context, eventCategory *model.EventCategory) error
+	CreateBulkWithTx(ctx context.Context, tx *gorm.DB, eventCategories []*model.EventCategory) error
+	AddCategoryToEventWithTx(ctx context.Context, tx *gorm.DB, event *model.Event) error
+	GetAll(ctx context.Context, query request.EventCategoryPaginateRequest, tenantID *string) ([]*model.EventCategory, int64, error)
 }
 
 type eventCategoryRepository struct {
@@ -22,18 +22,18 @@ func NewEventCategoryRepository(db *gorm.DB) EventCategoryRepository {
 	return &eventCategoryRepository{DB: db}
 }
 
-func (r *eventCategoryRepository) Create(eventCategory *model.EventCategory) error {
-	return r.DB.Create(eventCategory).Error
+func (r *eventCategoryRepository) Create(ctx context.Context, eventCategory *model.EventCategory) error {
+	return r.DB.WithContext(ctx).Create(eventCategory).Error
 }
 
-func (r *eventCategoryRepository) CreateBulkWithTx(ctx context.Context, tx *gorm.DB, eventCategories *[]model.EventCategory) error {
+func (r *eventCategoryRepository) CreateBulkWithTx(ctx context.Context, tx *gorm.DB, eventCategories []*model.EventCategory) error {
 	return tx.WithContext(ctx).Create(eventCategories).Error
 }
 
-func (r *eventCategoryRepository) GetAll(query request.EventCategoryPaginateRequest, tenantID *string) ([]*model.EventCategory, int64, error) {
+func (r *eventCategoryRepository) GetAll(ctx context.Context, query request.EventCategoryPaginateRequest, tenantID *string) ([]*model.EventCategory, int64, error) {
 	var eventCategories []*model.EventCategory
 	var total int64
-	db := r.DB.Model(&model.EventCategory{})
+	db := r.DB.WithContext(ctx).Model(&model.EventCategory{})
 
 	if query.Name != nil {
 		db = db.Where("name ILIKE ?", "%"+*query.Name+"%")
@@ -52,6 +52,6 @@ func (r *eventCategoryRepository) GetAll(query request.EventCategoryPaginateRequ
 	return eventCategories, total, nil
 }
 
-func (r *eventCategoryRepository) AddCategoryToEventWithTx(tx *gorm.DB, id string, event *model.Event) error {
-	return tx.Preload("Category").First(event, "id = ?", id).Error
+func (r *eventCategoryRepository) AddCategoryToEventWithTx(ctx context.Context, tx *gorm.DB, event *model.Event) error {
+	return tx.WithContext(ctx).Preload("Category").First(event, "id = ?", event.ID).Error
 }
