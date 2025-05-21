@@ -1,15 +1,17 @@
 package usecase
 
 import (
+	"context"
 	"fmt"
 	appErrors "github.com/andrianprasetya/eventHub/internal/shared/errors"
+	"github.com/andrianprasetya/eventHub/internal/shared/service"
 	"github.com/andrianprasetya/eventHub/internal/shared/utils"
 	"github.com/andrianprasetya/eventHub/internal/tenant/dto/mapper"
 	"github.com/andrianprasetya/eventHub/internal/tenant/dto/request"
 	"github.com/andrianprasetya/eventHub/internal/tenant/dto/response"
-	"github.com/andrianprasetya/eventHub/internal/tenant/model"
 	"github.com/andrianprasetya/eventHub/internal/tenant/repository"
 	log "github.com/sirupsen/logrus"
+	"time"
 )
 
 type SubscriptionPlanUsecase interface {
@@ -29,6 +31,9 @@ func NewSubscriptionPlanUsecase(subscriptionPlanRepo repository.SubscriptionPlan
 }
 
 func (u *subscriptionPlanUsecase) Create(req request.CreateSubscriptionPlanRequest) (*response.SubscriptionPlanResponse, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
 	features, err := utils.ToJSONString(req.Feature)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -36,15 +41,9 @@ func (u *subscriptionPlanUsecase) Create(req request.CreateSubscriptionPlanReque
 		}).Error("failed to modify Json to string")
 		return nil, appErrors.ErrInternalServer
 	}
-	subscriptionPlan := &model.SubscriptionPlan{
-		ID:          utils.GenerateID(),
-		Name:        req.Name,
-		Price:       req.Price,
-		Feature:     features,
-		DurationDay: req.DurationDay,
-	}
+	subscriptionPlan := service.MapSubscriptionPlanPayload(req, features)
 
-	if err := u.subscriptionPlanRepo.Create(subscriptionPlan); err != nil {
+	if err := u.subscriptionPlanRepo.Create(ctx, subscriptionPlan); err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to create subscription plan")
@@ -54,7 +53,9 @@ func (u *subscriptionPlanUsecase) Create(req request.CreateSubscriptionPlanReque
 }
 
 func (u *subscriptionPlanUsecase) GetAll(query request.SubscriptionPaginateParams) ([]*response.SubscriptionPlanListItemResponse, int64, error) {
-	subscriptionPlan, total, err := u.subscriptionPlanRepo.GetAll(query)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	subscriptionPlan, total, err := u.subscriptionPlanRepo.GetAll(ctx, query)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,
@@ -66,7 +67,10 @@ func (u *subscriptionPlanUsecase) GetAll(query request.SubscriptionPaginateParam
 }
 
 func (u *subscriptionPlanUsecase) Update(id string, req request.UpdateSubscriptionPlanRequest) (*response.SubscriptionPlanResponse, error) {
-	subscriptionPlan, err := u.subscriptionPlanRepo.GetByID(id)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	subscriptionPlan, err := u.subscriptionPlanRepo.GetByID(ctx, id)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,
@@ -104,7 +108,9 @@ func (u *subscriptionPlanUsecase) Update(id string, req request.UpdateSubscripti
 }
 
 func (u *subscriptionPlanUsecase) GetByID(id string) (*response.SubscriptionPlanResponse, error) {
-	subscriptionPlan, err := u.subscriptionPlanRepo.GetByID(id)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	subscriptionPlan, err := u.subscriptionPlanRepo.GetByID(ctx, id)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,
@@ -115,7 +121,9 @@ func (u *subscriptionPlanUsecase) GetByID(id string) (*response.SubscriptionPlan
 }
 
 func (u *subscriptionPlanUsecase) Delete(id string) error {
-	if err := u.subscriptionPlanRepo.Delete(id); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	if err := u.subscriptionPlanRepo.Delete(ctx, id); err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,
 		}).Error("failed to delete subscription plan")

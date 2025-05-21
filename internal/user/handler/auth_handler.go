@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	appErrors "github.com/andrianprasetya/eventHub/internal/shared/errors"
 	"github.com/andrianprasetya/eventHub/internal/shared/response"
 	"github.com/andrianprasetya/eventHub/internal/shared/validation"
@@ -32,10 +31,9 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationResponse(fiber.StatusBadRequest, errorMessages))
 	}
 
-	ctx := context.Background()
 	ip := c.IP()
 
-	token, err := h.userUC.Login(ctx, req, ip)
+	token, err := h.userUC.Login(req, ip)
 	if err != nil {
 		if appErr, ok := err.(*appErrors.AppError); ok {
 			message := appErr.Message

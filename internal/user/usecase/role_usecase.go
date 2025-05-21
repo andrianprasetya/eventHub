@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"context"
 	appErrors "github.com/andrianprasetya/eventHub/internal/shared/errors"
 	"github.com/andrianprasetya/eventHub/internal/shared/middleware"
 	"github.com/andrianprasetya/eventHub/internal/user/dto/mapper"
@@ -8,6 +9,7 @@ import (
 	"github.com/andrianprasetya/eventHub/internal/user/dto/response"
 	"github.com/andrianprasetya/eventHub/internal/user/repository"
 	log "github.com/sirupsen/logrus"
+	"time"
 )
 
 type RoleUsecase interface {
@@ -24,7 +26,9 @@ func NewRoleUsecase(roleRepo repository.RoleRepository) RoleUsecase {
 }
 
 func (r *roleUsecase) GetAll(query request.RolePaginateParams, userAuth middleware.AuthUser) ([]*response.RoleListItemResponse, int64, error) {
-	roles, total, err := r.roleRepo.GetAll(query, userAuth.Role.Slug)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	roles, total, err := r.roleRepo.GetAll(ctx, query, userAuth.Role.Slug)
 
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -39,7 +43,9 @@ func (r *roleUsecase) GetAll(query request.RolePaginateParams, userAuth middlewa
 }
 
 func (r *roleUsecase) GetByID(id string) (*response.RoleResponse, error) {
-	role, err := r.roleRepo.GetByID(id)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	role, err := r.roleRepo.GetByID(ctx, id)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,

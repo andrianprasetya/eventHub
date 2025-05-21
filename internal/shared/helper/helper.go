@@ -1,6 +1,7 @@
 package helper
 
 import (
+	"context"
 	"fmt"
 	"github.com/andrianprasetya/eventHub/internal/audit_security_log/model"
 	"github.com/andrianprasetya/eventHub/internal/audit_security_log/repository"
@@ -45,7 +46,7 @@ func LogLoginHistory(repo repository.LoginHistoryRepository, userId, ip string) 
 	}(log)
 }
 
-func LogActivity(repo repository.LogActivityRepository, tenantID, userID, url, action, objectData, objectType, objectID string) {
+func LogActivity(repo repository.LogActivityRepository, ctx context.Context, tenantID, userID, url, action, objectData, objectType, objectID string) {
 	activity := &model.ActivityLog{
 		ID:         utils.GenerateID(),
 		TenantID:   tenantID,
@@ -65,7 +66,7 @@ func LogActivity(repo repository.LogActivityRepository, tenantID, userID, url, a
 				}).Error("panic occurred in LogLoginHistory goroutine")
 			}
 		}()
-		if err := repo.Create(activity); err != nil {
+		if err := repo.Create(ctx, activity); err != nil {
 			logging.WithFields(logging.Fields{
 				"errors": err,
 			}).Error("failed to Log Activity")

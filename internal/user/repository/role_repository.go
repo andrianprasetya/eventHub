@@ -1,15 +1,16 @@
 package repository
 
 import (
+	"context"
 	"github.com/andrianprasetya/eventHub/internal/user/dto/request"
 	"github.com/andrianprasetya/eventHub/internal/user/model"
 	"gorm.io/gorm"
 )
 
 type RoleRepository interface {
-	GetAll(query request.RolePaginateParams, role string) ([]*model.Role, int64, error)
-	GetByID(id string) (*model.Role, error)
-	GetBySlug(slug string) (*model.Role, error)
+	GetAll(qctx context.Context, uery request.RolePaginateParams, role string) ([]*model.Role, int64, error)
+	GetByID(ctx context.Context, id string) (*model.Role, error)
+	GetBySlug(ctx context.Context, slug string) (*model.Role, error)
 }
 
 type roleRepository struct {
@@ -20,11 +21,11 @@ func NewRoleRepository(db *gorm.DB) RoleRepository {
 	return &roleRepository{DB: db}
 }
 
-func (r *roleRepository) GetAll(query request.RolePaginateParams, role string) ([]*model.Role, int64, error) {
+func (r *roleRepository) GetAll(ctx context.Context, query request.RolePaginateParams, role string) ([]*model.Role, int64, error) {
 	var roles []*model.Role
 	var total int64
 
-	db := r.DB.Model(&model.Role{})
+	db := r.DB.WithContext(ctx).Model(&model.Role{})
 	if role != "super-admin" {
 		db = db.Not("slug = ?", "super-admin").Not("slug = ?", "tenant-admin")
 	}
@@ -44,17 +45,17 @@ func (r *roleRepository) GetAll(query request.RolePaginateParams, role string) (
 	return roles, total, nil
 }
 
-func (r *roleRepository) GetByID(id string) (*model.Role, error) {
+func (r *roleRepository) GetByID(ctx context.Context, id string) (*model.Role, error) {
 	var role model.Role
-	if err := r.DB.First(&role, "id = ?", id).Error; err != nil {
+	if err := r.DB.WithContext(ctx).First(&role, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
 	return &role, nil
 }
 
-func (r *roleRepository) GetBySlug(slug string) (*model.Role, error) {
+func (r *roleRepository) GetBySlug(ctx context.Context, slug string) (*model.Role, error) {
 	var role model.Role
-	if err := r.DB.First(&role, "slug = ?", slug).Error; err != nil {
+	if err := r.DB.WithContext(ctx).First(&role, "slug = ?", slug).Error; err != nil {
 		return nil, err
 	}
 	return &role, nil

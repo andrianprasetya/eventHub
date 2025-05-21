@@ -1,15 +1,18 @@
 package repository
 
-import "gorm.io/gorm"
+import (
+	"context"
+	"gorm.io/gorm"
+)
 
 type TxManager interface {
-	Begin() *gorm.DB
+	Begin(ctx context.Context) *gorm.DB
 }
 
 type GormTxManager struct {
 	DB *gorm.DB
 }
 
-func (tm *GormTxManager) Begin() *gorm.DB {
-	return tm.DB.Begin()
+func (tm *GormTxManager) Begin(ctx context.Context) *gorm.DB {
+	return tm.DB.WithContext(ctx).Begin()
 }

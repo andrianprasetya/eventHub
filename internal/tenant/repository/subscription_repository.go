@@ -1,12 +1,13 @@
 package repository
 
 import (
+	"context"
 	"github.com/andrianprasetya/eventHub/internal/tenant/model"
 	"gorm.io/gorm"
 )
 
 type SubscriptionRepository interface {
-	CreateWithTx(tx *gorm.DB, subscription *model.Subscription) error
+	CreateWithTx(ctx context.Context, tx *gorm.DB, subscription *model.Subscription) error
 }
 
 type subscriptionRepository struct {
@@ -17,6 +18,6 @@ func NewSubscriptionRepository(db *gorm.DB) SubscriptionRepository {
 	return &subscriptionRepository{DB: db}
 }
 
-func (r subscriptionRepository) CreateWithTx(tx *gorm.DB, subscription *model.Subscription) error {
-	return tx.Create(&subscription).Error
+func (r subscriptionRepository) CreateWithTx(ctx context.Context, tx *gorm.DB, subscription *model.Subscription) error {
+	return tx.WithContext(ctx).Create(&subscription).Error
 }

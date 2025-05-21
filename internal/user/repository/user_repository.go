@@ -1,20 +1,21 @@
 package repository
 
 import (
+	"context"
 	"github.com/andrianprasetya/eventHub/internal/user/dto/request"
 	"github.com/andrianprasetya/eventHub/internal/user/model"
 	"gorm.io/gorm"
 )
 
 type UserRepository interface {
-	Create(user *model.User) error
-	CreateWithTx(tx *gorm.DB, user *model.User) error
-	GetByEmail(email string) (*model.User, error)
-	GetByID(id string) (*model.User, error)
-	GetAll(query request.UserPaginateParams, tenantID *string) ([]*model.User, int64, error)
-	Update(user *model.User) error
-	Delete(id string) error
-	CountCreatedUser(tenantID string) int
+	Create(ctx context.Context, user *model.User) error
+	CreateWithTx(ctx context.Context, tx *gorm.DB, user *model.User) error
+	GetByEmail(ctx context.Context, email string) (*model.User, error)
+	GetByID(ctx context.Context, id string) (*model.User, error)
+	GetAll(ctx context.Context, query request.UserPaginateParams, tenantID *string) ([]*model.User, int64, error)
+	Update(ctx context.Context, user *model.User) error
+	Delete(ctx context.Context, id string) error
+	CountCreatedUser(ctx context.Context, tenantID string) int
 }
 
 type userRepository struct {
@@ -25,20 +26,20 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 	return &userRepository{DB: db}
 }
 
-func (r *userRepository) Create(user *model.User) error {
-	return r.DB.Create(user).Error
+func (r *userRepository) Create(ctx context.Context, user *model.User) error {
+	return r.DB.WithContext(ctx).Create(user).Error
 }
 
-func (r *userRepository) CreateWithTx(tx *gorm.DB, user *model.User) error {
-	return tx.Create(user).Error
+func (r *userRepository) CreateWithTx(ctx context.Context, tx *gorm.DB, user *model.User) error {
+	return tx.WithContext(ctx).Create(user).Error
 }
 
-func (r *userRepository) GetByEmail(email string) (*model.User, error) {
+func (r *userRepository) GetByEmail(ctx context.Context, email string) (*model.User, error) {
 	var user model.User
 	var count int64
 
 	//return kalo data tidak ada 0
-	r.DB.Model(&model.User{}).Count(&count)
+	r.DB.WithContext(ctx).Model(&model.User{}).Count(&count)
 	if count == 0 {
 		return nil, nil
 	}
@@ -49,11 +50,11 @@ func (r *userRepository) GetByEmail(email string) (*model.User, error) {
 	return &user, nil
 }
 
-func (r *userRepository) GetAll(query request.UserPaginateParams, tenantID *string) ([]*model.User, int64, error) {
+func (r *userRepository) GetAll(ctx context.Context, query request.UserPaginateParams, tenantID *string) ([]*model.User, int64, error) {
 	var users []*model.User
 	var total int64
 
-	db := r.DB.Model(&model.User{}).Scopes(FilterUserQuery(query, tenantID))
+	db := r.DB.WithContext(ctx).Model(&model.User{}).Scopes(FilterUserQuery(query, tenantID))
 
 	if err := db.Count(&total).Error; err != nil {
 		return nil, 0, err
@@ -67,20 +68,28 @@ func (r *userRepository) GetAll(query request.UserPaginateParams, tenantID *stri
 	return users, total, nil
 }
 
-func (r *userRepository) GetByID(id string) (*model.User, error) {
+func (r *userRepository) GetByID(ctx context.Context, id string) (*model.User, error) {
 	var user model.User
-	if err := r.DB.Preload("Tenant").Preload("Role").First(&user, "id = ?", id).Error; err != nil {
+	if err := r.DB.WithContext(ctx).Preload("Tenant").Preload("Role").First(&user, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
 }
 
-func (r *userRepository) Update(user *model.User) error {
-	return r.DB.Save(user).Error
+func (r *userRepository) Update(ctx context.Context, user *model.User) error {
+	return r.DB.WithContext(ctx).Save(user).Error
 }
 
-func (r *userRepository) Delete(id string) error {
-	return r.DB.Where("id = ?", id).Delete(&model.User{}).Error
+func (r *userRepository) Delete(ctx context.Context, id string) error {
+	return r.DB.WithContext(ctx).Where("id = ?", id).Delete(&model.User{}).Error
+}
+
+func (r *userRepository) CountCreatedUser(ctx context.Context, tenantID string) int {
+	var count int64
+	if err := r.DB.WithContext(ctx).Model(model.User{}).Where("tenant_id = ?", tenantID).Count(&count).Error; err != nil {
+		return 0
+	}
+	return int(count)
 }
 
 func FilterUserQuery(query request.UserPaginateParams, tenantID *string) func(*gorm.DB) *gorm.DB {
@@ -107,12 +116,4 @@ func FilterUserQuery(query request.UserPaginateParams, tenantID *string) func(*g
 		}
 		return db
 	}
-}
-
-func (r *userRepository) CountCreatedUser(tenantID string) int {
-	var count int64
-	if err := r.DB.Model(model.User{}).Where("tenant_id = ?", tenantID).Count(&count).Error; err != nil {
-		return 0
-	}
-	return int(count)
 }

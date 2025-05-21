@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"github.com/andrianprasetya/eventHub/internal/event/dto/request"
 	"github.com/andrianprasetya/eventHub/internal/event/model"
 	"gorm.io/gorm"
@@ -8,7 +9,7 @@ import (
 
 type EventCategoryRepository interface {
 	Create(eventCategory *model.EventCategory) error
-	CreateBulkWithTx(tx *gorm.DB, eventCategories *[]model.EventCategory) error
+	CreateBulkWithTx(ctx context.Context, tx *gorm.DB, eventCategories *[]model.EventCategory) error
 	AddCategoryToEventWithTx(tx *gorm.DB, id string, event *model.Event) error
 	GetAll(query request.EventCategoryPaginateRequest, tenantID *string) ([]*model.EventCategory, int64, error)
 }
@@ -25,8 +26,8 @@ func (r *eventCategoryRepository) Create(eventCategory *model.EventCategory) err
 	return r.DB.Create(eventCategory).Error
 }
 
-func (r *eventCategoryRepository) CreateBulkWithTx(tx *gorm.DB, eventCategories *[]model.EventCategory) error {
-	return r.DB.Create(eventCategories).Error
+func (r *eventCategoryRepository) CreateBulkWithTx(ctx context.Context, tx *gorm.DB, eventCategories *[]model.EventCategory) error {
+	return tx.WithContext(ctx).Create(eventCategories).Error
 }
 
 func (r *eventCategoryRepository) GetAll(query request.EventCategoryPaginateRequest, tenantID *string) ([]*model.EventCategory, int64, error) {

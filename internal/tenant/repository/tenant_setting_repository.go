@@ -7,7 +7,7 @@ import (
 )
 
 type TenantSettingRepository interface {
-	CreateBulkWithTx(tx *gorm.DB, tenantSettings []*modelTenant.TenantSetting) error
+	CreateBulkWithTx(ctx context.Context, tx *gorm.DB, tenantSettings []*modelTenant.TenantSetting) error
 	GetByTenantID(ctx context.Context, tenantID, key string) (*modelTenant.TenantSetting, error)
 }
 
@@ -19,8 +19,8 @@ func NewTenantSettingRepository(db *gorm.DB) TenantSettingRepository {
 	return &tenantSettingRepository{DB: db}
 }
 
-func (r *tenantSettingRepository) CreateBulkWithTx(tx *gorm.DB, tenantSettings []*modelTenant.TenantSetting) error {
-	return tx.Create(tenantSettings).Error
+func (r *tenantSettingRepository) CreateBulkWithTx(ctx context.Context, tx *gorm.DB, tenantSettings []*modelTenant.TenantSetting) error {
+	return tx.WithContext(ctx).Create(tenantSettings).Error
 }
 
 func (r *tenantSettingRepository) GetByTenantID(ctx context.Context, tenantID, key string) (*modelTenant.TenantSetting, error) {

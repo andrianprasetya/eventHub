@@ -1,12 +1,13 @@
 package repository
 
 import (
+	"context"
 	"github.com/andrianprasetya/eventHub/internal/audit_security_log/model"
 	"gorm.io/gorm"
 )
 
 type LogActivityRepository interface {
-	Create(history *model.ActivityLog) error
+	Create(ctx context.Context, history *model.ActivityLog) error
 }
 
 type logActivityRepository struct {
@@ -17,6 +18,6 @@ func NewLogActivityRepository(db *gorm.DB) LogActivityRepository {
 	return &logActivityRepository{DB: db}
 }
 
-func (r *logActivityRepository) Create(history *model.ActivityLog) error {
-	return r.DB.Create(history).Error
+func (r *logActivityRepository) Create(ctx context.Context, history *model.ActivityLog) error {
+	return r.DB.WithContext(ctx).Create(history).Error
 }

@@ -15,10 +15,11 @@ import (
 	"github.com/andrianprasetya/eventHub/internal/user/dto/response"
 	"github.com/andrianprasetya/eventHub/internal/user/repository"
 	log "github.com/sirupsen/logrus"
+	"time"
 )
 
 type UserUsecase interface {
-	Login(ctx context.Context, req request.LoginRequest, ip string) (*response.LoginResponse, error)
+	Login(req request.LoginRequest, ip string) (*response.LoginResponse, error)
 	Create(req request.CreateUserRequest, auth *middleware.AuthUser, url string) error
 	GetAll(query request.UserPaginateParams, tenantID *string) ([]*response.UserListItemResponse, int64, error)
 	GetByID(id string) (*response.UserResponse, error)
@@ -49,8 +50,10 @@ func NewUserUsecase(
 	}
 }
 
-func (u *userUsecase) Login(ctx context.Context, req request.LoginRequest, ip string) (*response.LoginResponse, error) {
-	getUser, err := u.userRepo.GetByEmail(req.Email)
+func (u *userUsecase) Login(req request.LoginRequest, ip string) (*response.LoginResponse, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	getUser, err := u.userRepo.GetByEmail(ctx, req.Email)
 
 	//data tidak ada
 	if err != nil || getUser == nil {
@@ -95,8 +98,9 @@ func (u *userUsecase) Login(ctx context.Context, req request.LoginRequest, ip st
 	return service.BuildLoginResponse(authPayload), nil
 }
 
-func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.AuthUser, url string) error {
-	var err error
+func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.AuthUser, url string) (err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
 
 	hashedPassword, err := service.HashedPassword(req.Password)
 
@@ -108,7 +112,7 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.Aut
 		return appErrors.ErrInternalServer
 	}
 
-	role, err := u.roleRepo.GetByID(req.RoleID)
+	role, err := u.roleRepo.GetByID(ctx, req.RoleID)
 
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -120,7 +124,7 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.Aut
 
 	user := service.MapUserPayload(auth.Tenant.ID, role.ID, req.Name, req.Email, string(hashedPassword))
 
-	if err = u.userRepo.Create(user); err != nil {
+	if err = u.userRepo.Create(ctx, user); err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,
 			"user":   user,
@@ -139,13 +143,15 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.Aut
 		return appErrors.ErrInternalServer
 	}
 
-	helper.LogActivity(u.activityRepo, auth.Tenant.ID, auth.ID, url, "Create User", string(userJSON), "user", user.ID)
+	helper.LogActivity(u.activityRepo, ctx, auth.Tenant.ID, auth.ID, url, "Create User", string(userJSON), "user", user.ID)
 
 	return nil
 }
 
 func (u *userUsecase) GetAll(query request.UserPaginateParams, tenantID *string) ([]*response.UserListItemResponse, int64, error) {
-	users, total, err := u.userRepo.GetAll(query, tenantID)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	users, total, err := u.userRepo.GetAll(ctx, query, tenantID)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"errors":       err,
@@ -158,7 +164,9 @@ func (u *userUsecase) GetAll(query request.UserPaginateParams, tenantID *string)
 }
 
 func (u *userUsecase) GetByID(id string) (*response.UserResponse, error) {
-	user, err := u.userRepo.GetByID(id)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	user, err := u.userRepo.GetByID(ctx, id)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,
@@ -169,8 +177,10 @@ func (u *userUsecase) GetByID(id string) (*response.UserResponse, error) {
 	return mapper.FromUserModel(user), nil
 }
 
-func (u *userUsecase) Update(req request.UpdateUserRequest, id string) error {
-	user, err := u.userRepo.GetByID(id)
+func (u *userUsecase) Update(req request.UpdateUserRequest, id string) (err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	user, err := u.userRepo.GetByID(ctx, id)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,
@@ -186,7 +196,7 @@ func (u *userUsecase) Update(req request.UpdateUserRequest, id string) error {
 		user.IsActive = *req.IsActive
 	}
 
-	if err := u.userRepo.Update(user); err != nil {
+	if err := u.userRepo.Update(ctx, user); err != nil {
 		log.WithFields(log.Fields{
 			"errors":   err,
 			"req_user": req,
@@ -198,8 +208,10 @@ func (u *userUsecase) Update(req request.UpdateUserRequest, id string) error {
 
 }
 
-func (u *userUsecase) Delete(id string) error {
-	if err := u.userRepo.Delete(id); err != nil {
+func (u *userUsecase) Delete(id string) (err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	if err = u.userRepo.Delete(ctx, id); err != nil {
 		log.WithFields(log.Fields{
 			"errors": err,
 			"id":     id,
