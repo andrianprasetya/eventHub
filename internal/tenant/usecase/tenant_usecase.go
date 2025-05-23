@@ -4,7 +4,7 @@ import (
 	"context"
 	eventRepository "github.com/andrianprasetya/eventHub/internal/event/repository"
 	appErrors "github.com/andrianprasetya/eventHub/internal/shared/errors"
-	repositoryShared "github.com/andrianprasetya/eventHub/internal/shared/repository"
+	sharedRepository "github.com/andrianprasetya/eventHub/internal/shared/repository"
 	"github.com/andrianprasetya/eventHub/internal/shared/service"
 	"github.com/andrianprasetya/eventHub/internal/shared/utils"
 	"github.com/andrianprasetya/eventHub/internal/tenant/dto/request"
@@ -26,7 +26,7 @@ type TenantUsecase interface {
 }
 
 type tenantUsecase struct {
-	txManager               repositoryShared.TxManager
+	txManager               sharedRepository.TxManager
 	tenantRepo              repository.TenantRepository
 	tenantSettingRepository repository.TenantSettingRepository
 	subscriptionRepo        repository.SubscriptionRepository
@@ -38,7 +38,7 @@ type tenantUsecase struct {
 }
 
 func NewTenantUsecase(
-	txManager repositoryShared.TxManager,
+	txManager sharedRepository.TxManager,
 	tenantRepo repository.TenantRepository,
 	tenantSettingRepository repository.TenantSettingRepository,
 	subscriptionRepo repository.SubscriptionRepository,

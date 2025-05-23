@@ -1,8 +1,8 @@
 package service
 
 import (
-	"github.com/andrianprasetya/eventHub/internal/event/dto/request"
 	"github.com/andrianprasetya/eventHub/internal/shared/utils"
+	"github.com/andrianprasetya/eventHub/internal/ticket/dto/request"
 	modelTicket "github.com/andrianprasetya/eventHub/internal/ticket/model"
 )
 

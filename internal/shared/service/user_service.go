@@ -103,7 +103,7 @@ func CheckMaxUserCanCreated(countUserCreated int, tenantSetting *modelTenant.Ten
 
 	if countUserCreated >= maxUser {
 		return validation.ValidationError{
-			"user_limit": fmt.Sprintf("your subscription package not able create user more than %d", maxUser),
+			"user_limit": fmt.Sprintf("created user : %d, your subscription package have limit : %d", countUserCreated, maxUser),
 		}
 	}
 	return nil

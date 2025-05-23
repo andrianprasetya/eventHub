@@ -12,6 +12,8 @@ type EventRepository interface {
 	GetAll(ctx context.Context, query request.EventPaginateRequest, tenantID *string) ([]*model.Event, int64, error)
 	GetByID(ctx context.Context, id string) (*model.Event, error)
 	CountCreatedEvent(ctx context.Context, tenantID string) (int, error)
+	UpdateWithTx(ctx context.Context, tx *gorm.DB, event *model.Event) error
+	Update(ctx context.Context, event *model.Event) error
 }
 
 type eventRepository struct {
@@ -57,6 +59,14 @@ func (r *eventRepository) GetByID(ctx context.Context, id string) (*model.Event,
 		return nil, err
 	}
 	return &event, nil
+}
+
+func (r *eventRepository) UpdateWithTx(ctx context.Context, tx *gorm.DB, event *model.Event) error {
+	return tx.WithContext(ctx).Save(event).Error
+}
+
+func (r *eventRepository) Update(ctx context.Context, event *model.Event) error {
+	return r.DB.WithContext(ctx).Save(event).Error
 }
 
 func (r *eventRepository) CountCreatedEvent(ctx context.Context, tenantID string) (int, error) {

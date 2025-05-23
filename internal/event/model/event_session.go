@@ -8,6 +8,7 @@ type EventSession struct {
 	Title         string    `gorm:"type:varchar(255);not null"`
 	StartDateTime time.Time `gorm:"type:timestamp;not null"`
 	EndDateTime   time.Time `gorm:"type:timestamp;not null"`
+	Event         Event     `gorm:"foreignKey:EventID;references:ID"`
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }

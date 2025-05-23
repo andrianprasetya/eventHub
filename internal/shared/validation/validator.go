@@ -2,10 +2,10 @@ package validation
 
 import (
 	"fmt"
+	"github.com/andrianprasetya/eventHub/internal/shared/response"
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/gommon/log"
 	"gopkg.in/guregu/null.v4"
-	"reflect"
 	"strings"
 	"unicode"
 )
@@ -60,41 +60,39 @@ func (v *Validator) Validate(i interface{}) error {
 	return v.validator.Struct(i)
 }
 
-func getJSONTag(field reflect.StructField) string {
-	return strings.Split(field.Tag.Get("json"), ",")[0]
-}
-
-// Function to map validation errors to JSON tag names
-func MapValidationErrorsToJSONTags(req interface{}, errs validator.ValidationErrors) map[string]string {
-	errorMessages := make(map[string]string)
+func MapValidationErrorsToJSONTags(errs validator.ValidationErrors) []response.FieldErrors {
+	var result []response.FieldErrors
 
 	for _, e := range errs {
-		// Buat path JSON seperti discounts[0].start_date
-		fieldPath := trimStructPrefix(toJSONPath(e.Namespace()))
+		field := trimStructPrefix(toJSONPath(e.Namespace()))
+		msg := validationMessageForTag(e)
 
-		switch e.Tag() {
-		case "required":
-			errorMessages[fieldPath] = "is required"
-		case "min":
-			errorMessages[fieldPath] = fmt.Sprintf("must be at least %s characters", e.Param())
-		case "max":
-			errorMessages[fieldPath] = fmt.Sprintf("must be at most %s characters", e.Param())
-		case "unique":
-			errorMessages[fieldPath] = "must be unique"
-		case "not_past_date":
-			errorMessages[fieldPath] = "must not be before today"
-		case "not_past_datetime":
-			errorMessages[fieldPath] = "must not be before today time"
-		case "is_array":
-			errorMessages[fieldPath] = "must be an array"
-		case "smallint":
-			errorMessages[fieldPath] = "must be 0 or 1"
-		default:
-			errorMessages[fieldPath] = "is invalid"
-		}
+		result = append(result, response.FieldErrors{
+			Field:   field,
+			Message: msg,
+		})
 	}
 
-	return errorMessages
+	return result
+}
+
+func validationMessageForTag(e validator.FieldError) string {
+	switch e.Tag() {
+	case "required":
+		return "is required"
+	case "email":
+		return "must be a valid email"
+	case "min":
+		return fmt.Sprintf("must be at least %s characters", e.Param())
+	case "max":
+		return fmt.Sprintf("must be at most %s characters", e.Param())
+	case "unique":
+		return "must be unique"
+	case "smallint":
+		return "must be 0 or 1"
+	default:
+		return "is invalid"
+	}
 }
 
 // Mengubah CamelCase ke snake_case

@@ -64,7 +64,7 @@ func (h *EventHandler) Create(c *fiber.Ctx) error {
 
 	if errValidation := validation.NewValidator().Validate(&req); errValidation != nil {
 		errs := errValidation.(validator.ValidationErrors)
-		errorMessages := validation.MapValidationErrorsToJSONTags(req, errs)
+		errorMessages := validation.MapValidationErrorsToJSONTags(errs)
 		helper.FilterEventCreate(req, errorMessages)
 
 		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationResponse(fiber.StatusBadRequest, errorMessages))

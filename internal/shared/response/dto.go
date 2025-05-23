@@ -2,6 +2,11 @@ package response
 
 import "time"
 
+type FieldErrors struct {
+	Field   string `json:"field"`
+	Message string `json:"message"`
+}
+
 type UserLog struct {
 	ID       string `json:"id"`
 	TenantID string `json:"tenant_id"`

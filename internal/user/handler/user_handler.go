@@ -31,7 +31,7 @@ func (h *UserHandler) Create(c *fiber.Ctx) error {
 
 	if err := validation.NewValidator().Validate(&req); err != nil {
 		errs := err.(validator.ValidationErrors)
-		errorMessages := validation.MapValidationErrorsToJSONTags(req, errs)
+		errorMessages := validation.MapValidationErrorsToJSONTags(errs)
 		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationResponse(fiber.StatusBadRequest, errorMessages))
 	}
 
@@ -109,7 +109,7 @@ func (h *UserHandler) Update(c *fiber.Ctx) error {
 
 	if err := validation.NewValidator().Validate(&req); err != nil {
 		errs := err.(validator.ValidationErrors)
-		errorMessages := validation.MapValidationErrorsToJSONTags(req, errs)
+		errorMessages := validation.MapValidationErrorsToJSONTags(errs)
 		return c.Status(fiber.StatusBadRequest).JSON(response.ValidationResponse(fiber.StatusBadRequest, errorMessages))
 	}
 

@@ -11,15 +11,15 @@ import (
 	appErrors "github.com/andrianprasetya/eventHub/internal/shared/errors"
 	"github.com/andrianprasetya/eventHub/internal/shared/helper"
 	"github.com/andrianprasetya/eventHub/internal/shared/middleware"
-	repositoryShared "github.com/andrianprasetya/eventHub/internal/shared/repository"
+	sharedRepository "github.com/andrianprasetya/eventHub/internal/shared/repository"
 	"github.com/andrianprasetya/eventHub/internal/shared/service"
-	modelTenant "github.com/andrianprasetya/eventHub/internal/tenant/model"
-	repositoryTenant "github.com/andrianprasetya/eventHub/internal/tenant/repository"
-	repositoryTicket "github.com/andrianprasetya/eventHub/internal/ticket/repository"
+	tenantRepository "github.com/andrianprasetya/eventHub/internal/tenant/repository"
+	ticketRepository "github.com/andrianprasetya/eventHub/internal/ticket/repository"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"net/http"
 	"runtime/debug"
+	"strconv"
 	"time"
 )
 
@@ -29,29 +29,31 @@ type EventUsecase interface {
 	GetCategories(query request.EventCategoryPaginateRequest, tenantID *string) ([]*response.EventCategoryListItemResponse, int64, error)
 	GetAll(query request.EventPaginateRequest, tenantID *string) ([]*response.EventListItemResponse, int64, error)
 	GetByID(id string) (*response.EventResponse, error)
+	Update(req request.UpdateEventRequest, id string) error
+	Delete(id string) error
 }
 
 type eventUsecase struct {
-	txManager         repositoryShared.TxManager
-	tenantSettingRepo repositoryTenant.TenantSettingRepository
+	txManager         sharedRepository.TxManager
+	tenantSettingRepo tenantRepository.TenantSettingRepository
 	eventRepo         repository.EventRepository
 	eventTagRepo      repository.EventTagRepository
 	eventCategoryRepo repository.EventCategoryRepository
 	eventSessionRepo  repository.EventSessionRepository
-	ticketRepo        repositoryTicket.TicketRepository
-	discountRepo      repositoryTicket.DiscountRepository
+	ticketRepo        ticketRepository.TicketRepository
+	discountRepo      ticketRepository.DiscountRepository
 	activityRepo      logRepository.LogActivityRepository
 }
 
 func NewEventUsecase(
-	txManager repositoryShared.TxManager,
-	tenantSettingRepo repositoryTenant.TenantSettingRepository,
+	txManager sharedRepository.TxManager,
+	tenantSettingRepo tenantRepository.TenantSettingRepository,
 	eventRepo repository.EventRepository,
 	eventTagRepo repository.EventTagRepository,
 	eventCategoryRepo repository.EventCategoryRepository,
 	eventSessionRepo repository.EventSessionRepository,
-	ticketRepo repositoryTicket.TicketRepository,
-	discountRepo repositoryTicket.DiscountRepository,
+	ticketRepo ticketRepository.TicketRepository,
+	discountRepo ticketRepository.DiscountRepository,
 	activityRepo logRepository.LogActivityRepository,
 ) EventUsecase {
 	return &eventUsecase{
@@ -67,38 +69,57 @@ func NewEventUsecase(
 }
 
 func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.AuthUser, url string) (*response.EventResponse, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	var err error
 	var (
-		tenantSetting     *modelTenant.TenantSetting
+		maxEvent          int
 		countEventCreated int
 		unlimitedEvent    string
+		unlimitedTicket   string
+		maxTicket         int
 	)
 
 	g, gctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
-		getUnlimitedEvent, err := u.tenantSettingRepo.GetByTenantID(gctx, auth.Tenant.ID, "unlimited_events")
+		getTenantSetting, err := u.tenantSettingRepo.GetByTenantID(gctx, auth.Tenant.ID, "unlimited_events")
 		if err != nil {
 			return err
 		}
-		unlimitedEvent = getUnlimitedEvent.Value
+		unlimitedEvent = getTenantSetting.Value
 		return nil
 	})
 
 	g.Go(func() error {
-		getTenantSetting, err := u.tenantSettingRepo.GetByTenantID(ctx, auth.Tenant.ID, "max_events")
+		getTenantSetting, err := u.tenantSettingRepo.GetByTenantID(gctx, auth.Tenant.ID, "unlimited_tickets_per_event")
 		if err != nil {
 			return err
 		}
-		tenantSetting = getTenantSetting
+		unlimitedTicket = getTenantSetting.Value
 		return nil
 	})
 
 	g.Go(func() error {
-		getEventHasCreated, err := u.eventRepo.CountCreatedEvent(ctx, auth.Tenant.ID)
+		getTenantSetting, err := u.tenantSettingRepo.GetByTenantID(gctx, auth.Tenant.ID, "max_events")
+		if err != nil {
+			return err
+		}
+		maxEvent, _ = strconv.Atoi(getTenantSetting.Value)
+		return nil
+	})
+	g.Go(func() error {
+		getTenantSetting, err := u.tenantSettingRepo.GetByTenantID(gctx, auth.Tenant.ID, "max_tickets_per_event")
+		if err != nil {
+			return err
+		}
+		maxTicket, _ = strconv.Atoi(getTenantSetting.Value)
+		return nil
+	})
+
+	g.Go(func() error {
+		getEventHasCreated, err := u.eventRepo.CountCreatedEvent(gctx, auth.Tenant.ID)
 		if err != nil {
 			return err
 		}
@@ -120,13 +141,13 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 			log.WithFields(log.Fields{
 				"error": r,
 				"stack": string(debug.Stack()),
-			}).Error("Recovered from panic in CreateEvent")
+			}).Error("Recovered from panic in Create Event")
 			err = appErrors.ErrInternalServer
 		}
 	}()
 
 	if unlimitedEvent == "false" {
-		if err = service.CheckMaxEventCanCreated(countEventCreated, tenantSetting); err != nil {
+		if err = service.CheckMaxEventCanCreated(countEventCreated, maxEvent); err != nil {
 			return nil, appErrors.WrapExpose(err, "Created event quota Has been limit", http.StatusUnprocessableEntity)
 		}
 	}
@@ -158,7 +179,11 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 		return nil, appErrors.ErrInternalServer
 	}
 
-	eventTickets := service.MapEventTicket(event.ID, req.Tickets)
+	eventTickets, err := service.MapEventTicket(event.ID, unlimitedTicket, req.Tickets, maxTicket)
+	if err != nil {
+		tx.Rollback()
+		return nil, appErrors.WrapExpose(err, "ticket quota Has been limit", http.StatusUnprocessableEntity)
+	}
 
 	if err = u.ticketRepo.CreateBulkWithTx(ctx, tx, eventTickets); err != nil {
 		tx.Rollback()
@@ -269,4 +294,12 @@ func (u *eventUsecase) GetByID(id string) (*response.EventResponse, error) {
 	}
 
 	return mapper.FromEventModel(event), err
+}
+
+func (u *eventUsecase) Update(req request.UpdateEventRequest, id string) error {
+	return nil
+}
+
+func (u *eventUsecase) Delete(id string) error {
+	return nil
 }

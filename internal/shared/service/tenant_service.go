@@ -6,7 +6,6 @@ import (
 	"github.com/andrianprasetya/eventHub/internal/shared/validation"
 	"github.com/andrianprasetya/eventHub/internal/tenant/dto/request"
 	modelTenant "github.com/andrianprasetya/eventHub/internal/tenant/model"
-	"strconv"
 )
 
 func MapTenantPayload(request request.CreateTenantRequest) *modelTenant.Tenant {
@@ -20,11 +19,8 @@ func MapTenantPayload(request request.CreateTenantRequest) *modelTenant.Tenant {
 	}
 }
 
-func CheckMaxEventCanCreated(countEventCreated int, tenantSetting *modelTenant.TenantSetting) error {
-	maxEvent, _ := strconv.Atoi(tenantSetting.Value)
-
+func CheckMaxEventCanCreated(countEventCreated int, maxEvent int) error {
 	if countEventCreated >= maxEvent {
-
 		return validation.ValidationError{
 			"event_limit": fmt.Sprintf("your subscription package not able create event more than %d", maxEvent),
 		}

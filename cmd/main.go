@@ -12,6 +12,7 @@ import (
 	tenantRepository "github.com/andrianprasetya/eventHub/internal/tenant/repository"
 	tenantUsecase "github.com/andrianprasetya/eventHub/internal/tenant/usecase"
 	ticketRepository "github.com/andrianprasetya/eventHub/internal/ticket/repository"
+	ticketUsecase "github.com/andrianprasetya/eventHub/internal/ticket/usecase"
 	userRepository "github.com/andrianprasetya/eventHub/internal/user/repository"
 	userUsecase "github.com/andrianprasetya/eventHub/internal/user/usecase"
 	"github.com/andrianprasetya/eventHub/routes"
@@ -74,8 +75,10 @@ func main() {
 		ticketRepo,
 		discountRepo,
 		logActivityRepo)
+	ticketUC := ticketUsecase.NewTicketUsecase(txManager, ticketRepo, eventRepo, tenantSettingRepo, logActivityRepo)
+	discountUC := ticketUsecase.NewDiscountUsecase(discountRepo, eventRepo, logActivityRepo)
 
-	routes.SetupRoutes(app, redis, tenantUC, subscriptionPlanUC, userUC, roleUC, eventUC)
+	routes.SetupRoutes(app, redis, tenantUC, subscriptionPlanUC, userUC, roleUC, eventUC, ticketUC, discountUC)
 
 	log.Fatal(app.Listen(fmt.Sprintf("%s:%s", *host, *port)))
 }

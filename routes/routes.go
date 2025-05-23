@@ -7,6 +7,8 @@ import (
 	"github.com/andrianprasetya/eventHub/internal/shared/redisser"
 	TH "github.com/andrianprasetya/eventHub/internal/tenant/handler"
 	tenantUsecase "github.com/andrianprasetya/eventHub/internal/tenant/usecase"
+	ETH "github.com/andrianprasetya/eventHub/internal/ticket/handler"
+	ticketUsecase "github.com/andrianprasetya/eventHub/internal/ticket/usecase"
 	UH "github.com/andrianprasetya/eventHub/internal/user/handler"
 	userUsecase "github.com/andrianprasetya/eventHub/internal/user/usecase"
 	"github.com/gofiber/fiber/v2"
@@ -18,7 +20,9 @@ func SetupRoutes(c *fiber.App,
 	subscriptionPlanUC tenantUsecase.SubscriptionPlanUsecase,
 	userUC userUsecase.UserUsecase,
 	roleUC userUsecase.RoleUsecase,
-	eventUC eventUsecase.EventUsecase) {
+	eventUC eventUsecase.EventUsecase,
+	ticketUC ticketUsecase.TicketUsecase,
+	discountUC ticketUsecase.DiscountUsecase) {
 
 	tenantHandler := TH.NewTenantHandler(tenantUC)
 	subscriptionPlanHandler := TH.NewSubscriptionPlanHandler(subscriptionPlanUC)
@@ -26,6 +30,8 @@ func SetupRoutes(c *fiber.App,
 	userHandler := UH.NewUserHandler(userUC)
 	roleHandler := UH.NewRoleHandler(roleUC)
 	eventHandler := EH.NewEventHandler(eventUC)
+	ticketHandler := ETH.NewTicketHandler(ticketUC)
+	discountHandler := ETH.NewDiscountHandler(discountUC)
 
 	//without auth
 	v1ApiPublic := c.Group("/api/v1")
@@ -47,6 +53,8 @@ func SetupRoutes(c *fiber.App,
 	role := v1ApiPrivate.Group("/role")
 	tenant := v1ApiPrivate.Group("/tenant")
 	event := v1ApiPrivate.Group("/event")
+	ticket := v1ApiPublic.Group("/ticket")
+	discount := v1ApiPublic.Group("/discount")
 	subscription := v1ApiPrivate.Group("/subscription")
 
 	//user
@@ -69,6 +77,16 @@ func SetupRoutes(c *fiber.App,
 	event.Get("/get-categories", middleware.RequireRole("tenant-admin", "organizer"), eventHandler.GetCategories)
 	event.Post("/create", middleware.RequireRole("tenant-admin", "organizer"), eventHandler.Create)
 	event.Get("/get-all", middleware.RequireRole("super-admin", "tenant-admin", "organizer"), eventHandler.GetAll)
+
+	//ticket
+	ticket.Post("/create", ticketHandler.Create)
+	ticket.Get("/get-all", ticketHandler.GetAll)
+	ticket.Get("/get/:id", ticketHandler.GetByID)
+
+	//discount
+	discount.Post("/create", discountHandler.Create)
+	discount.Get("/get-all", discountHandler.GetAll)
+	discount.Get("/get/:id", discountHandler.GetByID)
 
 	//subscription
 	subscription.Post("/create", middleware.RequireRole("super-admin"), subscriptionPlanHandler.Create)

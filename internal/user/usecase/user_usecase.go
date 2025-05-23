@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	logRepository "github.com/andrianprasetya/eventHub/internal/audit_security_log/repository"
 	appErrors "github.com/andrianprasetya/eventHub/internal/shared/errors"
 	"github.com/andrianprasetya/eventHub/internal/shared/helper"
@@ -10,6 +11,7 @@ import (
 	repositoryShared "github.com/andrianprasetya/eventHub/internal/shared/repository"
 	"github.com/andrianprasetya/eventHub/internal/shared/service"
 	"github.com/andrianprasetya/eventHub/internal/shared/utils"
+	"github.com/andrianprasetya/eventHub/internal/shared/validation"
 	modelTenant "github.com/andrianprasetya/eventHub/internal/tenant/model"
 	repositoryTenant "github.com/andrianprasetya/eventHub/internal/tenant/repository"
 	"github.com/andrianprasetya/eventHub/internal/user/dto/mapper"
@@ -107,8 +109,12 @@ func (u *userUsecase) Login(req request.LoginRequest, ip string) (*response.Logi
 }
 
 func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.AuthUser, url string) (err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	//set context timeout 4 second
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	//cancel timeout
 	defer cancel()
+
+	//declare variable for use to get data for goroutine
 	var (
 		tenantSetting    *modelTenant.TenantSetting
 		countUserCreated int
@@ -116,8 +122,10 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.Aut
 		role             *modelUser.Role
 	)
 
+	//goroutine context errgroup
 	g, gctx := errgroup.WithContext(ctx)
 
+	//goroutine get tenant setting unlimited users
 	g.Go(func() error {
 		getUnlimitedUser, err := u.tenantSettingRepo.GetByTenantID(gctx, auth.Tenant.ID, "unlimited_users")
 		if err != nil {
@@ -127,6 +135,7 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.Aut
 		return nil
 	})
 
+	//goroutine get tenant setting max users
 	g.Go(func() error {
 		getTenantSetting, err := u.tenantSettingRepo.GetByTenantID(ctx, auth.Tenant.ID, "max_users")
 		if err != nil {
@@ -136,6 +145,7 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.Aut
 		return nil
 	})
 
+	//goroutine count how many user has created
 	g.Go(func() error {
 		getUserHasCreated, err := u.userRepo.CountCreatedUser(ctx, auth.Tenant.ID)
 		if err != nil {
@@ -145,15 +155,19 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.Aut
 		return nil
 	})
 
+	//goroutine get role by id specific
 	g.Go(func() error {
 		getRole, err := u.roleRepo.GetByID(ctx, req.RoleID)
 		if err != nil {
-			return err
+			return validation.ValidationError{
+				"role_id": fmt.Sprintf("category not found"),
+			}
 		}
 		role = getRole
 		return nil
 	})
 
+	//wait goroutine have error or not , after fetching
 	if err = g.Wait(); err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -161,14 +175,15 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.Aut
 		return appErrors.WrapExpose(err, "failed to fetch plan or role", http.StatusInternalServerError)
 	}
 
+	//check if tenant setting for unlimited user is false , count quota can create user
 	if unlimitedUser == "false" {
 		if err = service.CheckMaxUserCanCreated(countUserCreated, tenantSetting); err != nil {
 			return appErrors.WrapExpose(err, "Created user quota Has been limit", http.StatusUnprocessableEntity)
 		}
 	}
 
+	//hashed password
 	hashedPassword, err := service.HashedPassword(req.Password)
-
 	if err != nil {
 		log.WithFields(log.Fields{
 			"errors":   err,
@@ -177,6 +192,7 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.Aut
 		return appErrors.ErrInternalServer
 	}
 
+	//mapping user payload
 	user := service.MapUserPayload(auth.Tenant.ID, role.ID, req.Name, req.Email, string(hashedPassword))
 
 	if err = u.userRepo.Create(ctx, user); err != nil {
@@ -187,6 +203,7 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.Aut
 		return appErrors.ErrInternalServer
 	}
 
+	//after mapping the user encode the data to json
 	userJSON, err := json.Marshal(user)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -196,6 +213,7 @@ func (u *userUsecase) Create(req request.CreateUserRequest, auth *middleware.Aut
 		return appErrors.ErrInternalServer
 	}
 
+	//log activity has been done
 	helper.LogActivity(u.activityRepo, ctx, auth.Tenant.ID, auth.ID, url, "Create User", string(userJSON), "user", user.ID)
 
 	return nil
@@ -225,7 +243,9 @@ func (u *userUsecase) GetByID(id string) (*response.UserResponse, error) {
 			"errors": err,
 			"id":     id,
 		}).Error("failed to get user")
-		return nil, appErrors.ErrInternalServer
+		return nil, validation.ValidationError{
+			"role_id": fmt.Sprintf("category not found"),
+		}
 	}
 	return mapper.FromUserModel(user), nil
 }
