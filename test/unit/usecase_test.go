@@ -93,7 +93,7 @@ func TestBuildLoginResponse(t *testing.T) {
 	require.Equal(t, "user@email.com", resp.Username)
 	require.Equal(t, "tenant.domain.com", resp.TenantDomain)
 	require.Equal(t, "Bearer", resp.TokenType)
-	require.Equal(t, 600, resp.Exp)
+	require.Equal(t, int64(600), resp.Exp)
 }
 
 func TestHandleAndSaveTokenToRedis(t *testing.T) {
