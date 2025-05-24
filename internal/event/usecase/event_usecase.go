@@ -129,7 +129,7 @@ func (u *eventUsecase) Create(req request.CreateEventRequest, auth middleware.Au
 	if err = g.Wait(); err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
-		}).Error("failed to fetch plan or role")
+		}).Error("failed to fetch tenant")
 		return nil, appErrors.WrapExpose(err, "failed to fetch plan or role", http.StatusInternalServerError)
 	}
 
