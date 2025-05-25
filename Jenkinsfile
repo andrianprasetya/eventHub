@@ -7,6 +7,10 @@ pipeline {
         APP_NAME = "myapp"
         BUILD_DIR = "build"
         ENV = "production" // bisa diubah ke dev, staging, dll
+          // Set PATH ke lokasi Go manual
+        GOROOT = "/usr/local/go"
+        GOPATH = "${env.WORKSPACE}/go"
+        PATH = "${env.GOROOT}/bin:${env.GOPATH}/bin:${env.PATH}"
     }
 
     tools {
@@ -24,6 +28,12 @@ pipeline {
                 checkout scm
             }
         }
+
+    stage('Verify Go') {
+                steps {
+                    sh 'go version'
+                }
+            }
 
         stage('Setup') {
             steps {
