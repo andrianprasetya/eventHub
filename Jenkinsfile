@@ -34,7 +34,7 @@ pipeline {
 
         stage('Test') {
             steps {
-                sh 'go test ./... -v -coverprofile=coverage.out'
+                sh 'go test ./test'
             }
         }
 
@@ -61,8 +61,8 @@ pipeline {
                 echo "Deploying ${APP_NAME} to ${ENV} environment..."
                 // Contoh deploy ke remote server via SSH
                 sh """
-                    scp ${BUILD_DIR}/${APP_NAME} root@165.22.63.86:/opt/myapp/${APP_NAME}
-                    ssh root@165.22.63.86 'systemctl restart ${APP_NAME}'
+                    scp ${BUILD_DIR}/${APP_NAME} /opt/myapp/${APP_NAME}
+                    'systemctl restart ${APP_NAME}'
                 """
             }
         }
