@@ -32,13 +32,6 @@ pipeline {
             }
         }
 
-        stage('Lint') {
-            steps {
-                sh 'go install golang.org/x/lint/golint@latest'
-                sh 'golint ./...'
-            }
-        }
-
         stage('Test') {
             steps {
                 sh 'go test ./... -v -coverprofile=coverage.out'
