@@ -1,17 +1,89 @@
 pipeline {
     agent any
 
-    triggers {
-        githubPush()  // <- ini trigger otomatis dari push GitHub
+    environment {
+        // Environment Variables
+        GO_VERSION = "1.22.5"
+        APP_NAME = "myapp"
+        BUILD_DIR = "build"
+        ENV = "production" // bisa diubah ke dev, staging, dll
+    }
+
+    tools {
+        go "${GO_VERSION}"
+    }
+
+    options {
+        timestamps()
+        ansiColor('xterm')
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git credentialsId: 'github-creds', url: 'https://github.com/andrianprasetya/eventHub.git', branch: 'master'
+                checkout scm
             }
         }
 
-        // Tambahkan stage-stage berikutnya seperti build, ssh, deploy
+        stage('Setup') {
+            steps {
+                sh 'go mod download'
+            }
+        }
+
+        stage('Lint') {
+            steps {
+                sh 'go install golang.org/x/lint/golint@latest'
+                sh 'golint ./...'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh 'go test ./... -v -coverprofile=coverage.out'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh """
+                    mkdir -p ${BUILD_DIR}
+                    go build -o ${BUILD_DIR}/${APP_NAME} .
+                """
+            }
+        }
+
+        stage('Archive Build') {
+            steps {
+                archiveArtifacts artifacts: "${BUILD_DIR}/${APP_NAME}", fingerprint: true
+            }
+        }
+
+        stage('Deploy') {
+            when {
+                branch 'master'
+            }
+            steps {
+                echo "Deploying ${APP_NAME} to ${ENV} environment..."
+                // Contoh deploy ke remote server via SSH
+                sh """
+                    scp ${BUILD_DIR}/${APP_NAME} root@165.22.63.86:/opt/myapp/${APP_NAME}
+                    ssh root@165.22.63.86 'systemctl restart ${APP_NAME}'
+                """
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Cleaning up...'
+            cleanWs()
+        }
+        success {
+            echo '✅ Build and deployment succeeded!'
+        }
+        failure {
+            echo '❌ Build or deployment failed!'
+        }
     }
 }
