@@ -34,7 +34,7 @@ pipeline {
 
         stage('Test') {
             steps {
-                sh 'go test ./test'
+                sh 'go test ./test/unit'
             }
         }
 
