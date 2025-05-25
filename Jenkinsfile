@@ -13,11 +13,6 @@ pipeline {
         PATH = "${env.GOROOT}/bin:${env.GOPATH}/bin:${env.PATH}"
     }
 
-    options {
-        timestamps()
-        ansiColor('xterm')
-    }
-
     stages {
         stage('Checkout') {
             steps {
