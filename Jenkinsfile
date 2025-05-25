@@ -13,10 +13,6 @@ pipeline {
         PATH = "${env.GOROOT}/bin:${env.GOPATH}/bin:${env.PATH}"
     }
 
-    tools {
-        go "${GO_VERSION}"
-    }
-
     options {
         timestamps()
         ansiColor('xterm')
