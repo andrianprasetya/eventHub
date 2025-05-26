@@ -42,7 +42,7 @@ pipeline {
             steps {
                 sh """
                     mkdir -p ${BUILD_DIR}
-                    go build -o ${BUILD_DIR}/${APP_NAME} .
+                    go build -o ${BUILD_DIR}/${APP_NAME} ./cmd/main.go
                 """
             }
         }
