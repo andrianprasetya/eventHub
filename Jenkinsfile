@@ -4,7 +4,7 @@ pipeline {
     environment {
         // Environment Variables
         GO_VERSION = "1.22.5"
-        APP_NAME = "myapp"
+        APP_NAME = "eventhub"
         BUILD_DIR = "build"
         ENV = "production" // bisa diubah ke dev, staging, dll
           // Set PATH ke lokasi Go manual
@@ -61,7 +61,7 @@ pipeline {
                 echo "Deploying ${APP_NAME} to ${ENV} environment..."
                 // Contoh deploy ke remote server via SSH
                 sh """
-                    scp ${BUILD_DIR}/${APP_NAME} /opt/myapp/${APP_NAME}
+                    scp ${BUILD_DIR}/${APP_NAME} /home/andrianprasetya/myapp/${APP_NAME}
                     'systemctl restart ${APP_NAME}'
                 """
             }
