@@ -58,8 +58,9 @@ pipeline {
                 echo "Deploying ${APP_NAME} to ${ENV} environment..."
                 // Contoh deploy ke remote server via SSH
                 sh """
+                    sudo systemctl stop ${APP_NAME}
                     sudo cp ${BUILD_DIR}/${APP_NAME} /home/andrianprasetya/myapp/${APP_NAME}
-                    'sudo systemctl restart ${APP_NAME}'
+                    sudo systemctl restart ${APP_NAME}
                 """
             }
         }
