@@ -54,9 +54,6 @@ pipeline {
         }
 
         stage('Deploy') {
-            when {
-                branch 'master'
-            }
             steps {
                 echo "Deploying ${APP_NAME} to ${ENV} environment..."
                 // Contoh deploy ke remote server via SSH
